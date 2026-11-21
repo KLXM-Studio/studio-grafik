@@ -1,0 +1,16 @@
+{
+  "name": "klxm-studio-grafik-build",
+  "private": true,
+  "license": "MIT",
+  "description": "Build-Abhängigkeiten des Grafik-Editors (Erweiterung „grafik“ für KLXM Studio): Paper.js, fontkit, jsPDF, svg2pdf.js, hyphen. Gebaut wird mit dem Build des Cores (tools/build.mjs ruft build.mjs dieses Pakets); auf dem Server nicht erforderlich – die gebauten Dateien liegen in public/.",
+  "type": "module",
+  "packageManager": "pnpm@10.29.2",
+  "devDependencies": {
+    "fontkit": "2.0.4",
+    "hyphen": "1.14.1",
+    "jspdf": "4.2.1",
+    "paper": "0.12.18",
+    "paperjs-offset": "2.2.2",
+    "svg2pdf.js": "2.8.1"
+  }
+}

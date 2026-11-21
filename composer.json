@@ -1,0 +1,12 @@
+{
+    "name": "klxm/studio-grafik",
+    "description": "KLXM Studio – Grafik-Editor: Infografiken mit Design-Farben, Bewegung und Daten, Symbole, Blockvorschauen, eigene Bausteine, Bilder mit Foto und Text, Formate für soziale Netzwerke und Vorlagen zum Ausfüllen – direkt in der Verwaltung",
+    "type": "klxm-studio-extension",
+    "license": "MIT",
+    "keywords": ["klxm-studio", "klxm-studio-extension", "svg", "graphics", "editor", "infographics", "vector"],
+    "homepage": "https://studio.klxm.de",
+    "support": { "source": "https://github.com/KLXM-Studio/studio-grafik", "issues": "https://github.com/KLXM-Studio/studio-grafik/issues" },
+    "authors": [{ "name": "KLXM Crossmedia GmbH and contributors" }],
+    "require": { "php": ">=8.4.1" },
+    "extra": { "klxm-studio": { "entry": "extension.php", "requires-core": ">=1.0.0" } }
+}
