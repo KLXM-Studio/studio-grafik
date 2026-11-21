@@ -6,7 +6,7 @@
  */
 import { pt, docMatrix } from './geom.js';
 import { getProp } from './doc.js';
-import { readText, plainOf, applyInput, styleRange, rangeHas, layoutText, lineAt, plainIndex, transformCase, toChars } from './text.js';
+import { readText, plainOf, applyInput, styleRange, rangeHas, layoutText, lineAt, plainIndex, transformCase, toChars, frameSpan } from './text.js';
 
 export class TextEditor {
   /** at: { clientX, clientY } = Schreibmarke dort; sonst alles auswählen */
@@ -172,11 +172,15 @@ export class TextEditor {
   }
 
   /** Textfeld an die Schreibmarke legen (Eingabehilfen erscheinen dort) */
-  place() {
-    const c = this.caretPos(this.range[1]);
+  place() { this.placeAt(this.caretPos(this.range[1])); }
+
+  placeAt(c) {
     const ta = this.ta;
-    const q = c ? this.ed.toOv(pt(docMatrix(this.el, this.ed.root), c.x, c.y)) : { x: 0, y: 0 };
-    ta.style.left = q.x + 'px'; ta.style.top = q.y + 'px';
+    if (!c) return;
+    const q = this.ed.toOv(pt(docMatrix(this.el, this.ed.root), c.x, c.y));
+    const l = q.x + 'px', tp = q.y + 'px';
+    if (ta.style.left !== l) ta.style.left = l;
+    if (ta.style.top !== tp) ta.style.top = tp;
   }
 
   /** Position (Grundlinie) vor dem Zeichen i im Raum des Textes */
@@ -216,6 +220,9 @@ export class TextEditor {
       }
     }
     const c = this.caretPos(b);
+    // Eingabefeld folgt der Schreibmarke (auch nach Klick, Pfeiltasten, Zoom, Verschieben der Ansicht) – Eingabehilfen,
+    // Wortvorschläge und die Bildschirmtastatur erscheinen am Text
+    this.placeAt(c);
     if (c) {
       const rad = (c.r || 0) * Math.PI / 180, ux = Math.sin(rad), uy = -Math.cos(rad);
       const p1 = S({ x: c.x + ux * fs * 0.85, y: c.y + uy * fs * 0.85 }), p2 = S({ x: c.x - ux * fs * 0.22, y: c.y - uy * fs * 0.22 });
@@ -284,8 +291,10 @@ export class TextEditor {
       const b = this.el.getBBox(), m = this.el.getScreenCTM();
       const p = new DOMPoint(cx, cy).matrixTransform(DOMMatrix.fromMatrix(m).inverse());
       const pad = (parseFloat(getProp(this.el, 'font-size')) || 16) * 0.3;
-      const w = Math.max(b.width, parseFloat(this.el.getAttribute('data-ge-frame')) || 0);
-      return p.x >= b.x - pad && p.x <= b.x + w + pad && p.y >= b.y - pad && p.y <= b.y + b.height + pad;
+      // Textrahmen: ganze Breite gilt (Lage je nach Ausrichtung, frameSpan)
+      const f = frameSpan(this.el);
+      const x0 = Math.min(b.x, f ? f.x0 : b.x), x1 = Math.max(b.x + b.width, f ? f.x1 : -Infinity);
+      return p.x >= x0 - pad && p.x <= x1 + pad && p.y >= b.y - pad && p.y <= b.y + b.height + pad;
     } catch { return false; }
   }
 

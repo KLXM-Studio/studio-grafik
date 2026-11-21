@@ -350,6 +350,25 @@ export function layoutText(el, m, opts = {}) {
   return map;
 }
 
+/** Ausrichtung eines Texts (start|middle|end) – wie gezeichnet (Attribut, Stil, sonst geerbt) */
+export function anchorOf(el) {
+  let a = (el.style?.getPropertyValue('text-anchor') || el.getAttribute('text-anchor') || '').trim();
+  if (!a && el.isConnected) { try { a = getComputedStyle(el).getPropertyValue('text-anchor').trim(); } catch { /* alt */ } }
+  return a === 'middle' || a === 'end' ? a : 'start';
+}
+
+/**
+ * Waagerechte Lage eines Textrahmens im Raum des Texts: x ist je nach Ausrichtung linke Kante, Mitte oder rechte Kante des
+ * Rahmens (data-ge-frame = Breite). Rückgabe { x0, x1, w, x, anchor } oder null ohne Rahmen.
+ */
+export function frameSpan(el) {
+  const w = parseFloat(el.getAttribute('data-ge-frame')) || 0;
+  if (!w) return null;
+  const x = parseFloat((el.getAttribute('x') || '0').trim().split(/[\s,]+/)[0]) || 0, anchor = anchorOf(el);
+  const x0 = anchor === 'middle' ? x - w / 2 : anchor === 'end' ? x - w : x;
+  return { x0, x1: x0 + w, w, x, anchor };
+}
+
 /** Zeile zur Klartext-Position i */
 export function lineAt(map, i) {
   let best = map.lines[0];

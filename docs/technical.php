@@ -111,6 +111,17 @@
       Stand) – Rückgängig wählt <code>selBefore</code>, Wiederholen <code>sel</code>; eine betretene Gruppe bleibt betreten. Pfeiltasten sammeln
       sich 400 ms zu einem Schritt (<code>flushNudge()</code> vor jedem anderen Schritt und vor ⌘Z). Während der Textbearbeitung hat
       <code>TextEditor</code> ein eigenes Rückgängig (Getipptes in einem Zug, Formatierung, Schreibweise) – das Textfeld kennt nur Getipptes.</li>
+    <li><b>Hintergrund von Texten</b> (<code>textbg.js</code>): <code>text[data-ge-bg="p=6;r=4"]</code> (Innenabstand, Eckenradius) und direkt
+      davor ein gewöhnliches <code>&lt;rect data-ge-bgfor="text-id"&gt;</code>, das <code>transform</code>, <code>display</code> und Rahmen des
+      Texts übernimmt (<code>getBBox()</code>, bei Textrahmen die ganze Breite aus <code>frameSpan()</code>). Farbe, Deckkraft und Rahmen sind
+      Füllung/Kontur des Rechtecks (Design- und Dunkel-Farben, <code>backgroundIn()</code> sieht es als Fläche unter dem Text).
+      <code>data-ge-bgs</code> spiegelt die Gestaltung („fill=…;stroke=…“, ohne <code>url()</code>), damit Kopien und Einfügen sie mitbringen;
+      <code>updateBgs()</code> legt fehlende Rechtecke an und entfernt verwaiste. <code>pickable()</code> leitet einen Klick auf das Rechteck auf den
+      Text um. Die Namen sind so gewählt, dass <code>Core\Svg</code> sie in der Arbeitsfassung behält (<code>data-ge-[a-z]+</code>).</li>
+    <li><b>Lage von Textrahmen:</b> <code>frameSpan(el)</code> (<code>text.js</code>) – <code>x</code> ist je nach <code>text-anchor</code> linke
+      Kante, Mitte oder rechte Kante des Rahmens. Überlagerung (<code>drawTextFrame</code>), Breite ziehen (Mitte: zu beiden Seiten, rechts: Griff
+      links) und Trefferprüfung beim Bearbeiten nutzen sie. Das unsichtbare Eingabefeld folgt bei jedem Zeichnen der Schreibmarke
+      (<code>TextEditor.placeAt</code>), damit Wortvorschläge und Bildschirmtastatur am Text erscheinen.</li>
     <li><b>Text:</b> Modell aus Absätzen mit Läufen (<code>text.js</code>); geschrieben wird nur, was bearbeitet wird. Zeilen als
       <code>&lt;tspan x dy="1.2em"&gt;</code>, Läufe als <code>&lt;tspan font-weight=…&gt;</code>, Textrahmen bricht mit vom Browser
       gemessenen Breiten um (kein <code>foreignObject</code>), Text auf Pfad als <code>&lt;textPath href&gt;</code>. In Kurven: Positionen je
@@ -371,8 +382,11 @@
     <li><b>Verbinder</b> (<code>connect.js</code>): gewöhnlicher <code>&lt;path&gt;</code> mit Markern; Beziehung in
       <code>data-ge-conn="a=form-1@r;b=form-2@l;r=ortho;m=0.5;hs=none;he=triangle;s=4"</code> (Seite t/r/b/l, <code>a</code> = automatisch,
       <code>n3</code> = Knoten 3; freies Ende <code>@x,y</code>). <code>Connectors.update()</code> läuft vor jedem Zeichnen und jedem
-      Protokollschritt (Verbinder neu berechnen, Beschriftung <code>text[data-ge-for]</code> in die Mitte, Text in Formen
-      <code>text[data-ge-in]</code> zentrieren und umbrechen). Fehlt die Form, wird das Ende frei (letzte Lage). Spitzen als
+      Protokollschritt (Verbinder neu berechnen, Beschriftung <code>text[data-ge-for]</code> an ihre Stelle – <code>data-ge-at</code> = Lage
+      entlang der Linie 0–1, fehlt = Mitte; wurde sie verschoben (x/y bzw. <code>transform</code> anders als zuletzt gesetzt), rastet sie am nächsten
+      Punkt der Linie ein und merkt die Lage –, Text in Formen <code>text[data-ge-in]</code> zentrieren und umbrechen, zuletzt Hintergründe von
+      Texten). Beschriften: Doppelklick, <kbd>↵</kbd>, Kontextmenü oder Feld <code>[data-conn-label]</code> der Kontextleiste
+      (<code>connLabel/connLabelSet/connUnlabel/connLabelCenter</code>). Fehlt die Form, wird das Ende frei (letzte Lage). Spitzen als
       <code>marker</code> je Art/Größe/Farbe (<code>data-ge-head</code>), der Pfad endet vor der Spitze. <code>layoutTree()</code> ordnet
       Bäume (Kinder über Verbinder a → b), <code>describe()</code> liefert die Lesereihenfolge für <code>&lt;desc&gt;</code>.</li>
     <li><b>Bibliothek</b>: <code>Library::all()</code> mit Gruppen Flussdiagramm, Organigramm, Hinweise &amp; Pfeile (Fläche für Text:

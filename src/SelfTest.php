@@ -21,6 +21,8 @@ use Core\Svg;
  *    „design.edit“, Symbole und Bausteine „blocks.build“ (Graphics::RIGHTS) – Redaktion ohne Recht: kein Knopf, POST → 403
  *  - Arbeitsfassung: beim erneuten Öffnen gilt die Arbeitsfassung, solange die Datei dieselbe ist; Blockvorschau je Variante
  *  - Persona Bild und Vorlagen; Bibliothek; Fassungen, Präsenz, „Verwendet auf“
+ *  - Texte: Beschriftung von Verbindern (Lage entlang der Linie), Text in Formen und Hintergrund von Texten bleiben in der
+ *    Arbeitsfassung erhalten (Core\Svg mit 'editor'), die Web-Fassung enthält nur das Rechteck; der Editor kennt die Angaben
  *  - Anbindung an den Core: Routen der Erweiterung mit Recht, Mediathek-Angaben (ext.grafik), Filter media.usages und
  *    presence.object, Blockauswahl „Vorschau gestalten“, Angaben für das Verwaltungs-Skript (adminData)
  * Datenbank-Änderungen laufen in einer Transaktion und werden zurückgerollt; angelegte Dateien werden gelöscht.
@@ -59,6 +61,7 @@ final class SelfTest
         self::permissions();
         self::bildClean();
         self::prefs();
+        self::texts();
         $db = app()->db;
         $db->pdo->beginTransaction();
         $files = [];
@@ -79,6 +82,31 @@ final class SelfTest
             app()->settings->forget();
         }
         return ['ok' => self::$ok, 'fails' => self::$fails];
+    }
+
+    /**
+     * Texte (textbg.js, connect.js): data-ge-for/at (Beschriftung eines Verbinders), data-ge-in/frame (Text in einer Form),
+     * data-ge-bg/bgs + rect[data-ge-bgfor] (Hintergrund) überstehen das Speichern der Arbeitsfassung; ohne 'editor' fallen sie weg.
+     */
+    private static function texts(): void
+    {
+        $work = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">'
+            . '<rect id="a" x="80" y="200" width="160" height="90" fill="#3B82F6"/><rect id="b" x="540" y="120" width="160" height="90" fill="#10B981"/>'
+            . '<path id="verbinder-1" d="M240 245H390V165H540" fill="none" stroke="#1F2430" stroke-width="2" data-ge-conn="a=a@r;b=b@l;r=ortho;m=0.5;hs=none;he=triangle;s=4"/>'
+            . '<rect data-ge-bgfor="lab-1" data-name="Texthintergrund" fill="#FFE08A" fill-opacity="0.9" stroke="#1F2430" stroke-width="1" x="380" y="190" width="40" height="24" rx="4"/>'
+            . '<text id="lab-1" data-ge-for="verbinder-1" data-ge-at="0.8134" data-ge-bg="p=6;r=4" data-ge-bgs="data-name=Texthintergrund;fill=#FFE08A;fill-opacity=0.9;stroke=#1F2430;stroke-width=1" x="400" y="205" font-size="14" text-anchor="middle">Ja</text>'
+            . '<text data-ge-in="a" data-ge-frame="128" x="160" y="250" text-anchor="middle" font-size="16">Start</text></svg>';
+        $kept = Svg::clean($work, ['editor' => true])['svg'];
+        foreach (['data-ge-for="verbinder-1"', 'data-ge-at="0.8134"', 'data-ge-bg="p=6;r=4"', 'data-ge-bgfor="lab-1"', 'data-ge-in="a"', 'data-ge-frame="128"',
+            'data-ge-bgs="data-name=Texthintergrund;fill=#FFE08A;fill-opacity=0.9;stroke=#1F2430;stroke-width=1"'] as $a) {
+            self::t(str_contains($kept, $a), "Arbeitsfassung behält $a");
+        }
+        self::t((bool) preg_match('~<rect[^>]*data-ge-bgfor="lab-1"[^>]*/?>(</rect>)?\s*<text[^>]*id="lab-1"~', $kept), 'Arbeitsfassung: Hintergrund liegt direkt vor dem Text');
+        $web = Svg::clean($work, ['keep_ids' => true])['svg'];
+        self::t(!str_contains($web, 'data-ge-') && str_contains($web, '#FFE08A'), 'Web-Fassung: Hintergrund als Rechteck, ohne Editor-Daten');
+        // gebauter Editor kennt die Angaben (Build aktuell)
+        $js = (string) @file_get_contents(dirname(__DIR__) . '/public/js/grafik.js');
+        self::t($js === '' || (str_contains($js, 'data-ge-bgfor') && str_contains($js, 'data-ge-at') && str_contains($js, 'data-conn-label')), 'Gebauter Editor: Texthintergrund und Beschriftung von Verbindern');
     }
 
     private static function t(bool $cond, string $label): void

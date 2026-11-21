@@ -329,6 +329,14 @@
       <b>Zeichenvorlagen</b> (für markierte Zeichen) „Aus Auswahl“ anlegen, per Klick anwenden. „Aus Auswahl aktualisieren“ ändert alle
       Texte bzw. Zeichen mit dieser Vorlage auf einmal. Vorlagen gehören zur Grafik; über das Menü kommen sie in die <b>Bibliothek der
       Website</b> und stehen dann in jeder Grafik bereit.</li>
+    <li id="grafik-texthintergrund"><b>Hintergrund</b> (Bereich Zeichen, ganz unten): „Fläche hinter dem Text“ legt eine Fläche hinter freie Texte,
+      Texte in Formen und Beschriftungen von Verbindern – mit <b>Farbe</b>, <b>Deckkraft</b>, <b>Innenabstand</b>, <b>Eckenradius</b> und
+      optional <b>Rahmen</b> (Breite 0 = ohne). Die Fläche passt sich beim Tippen, bei Schriftgröße, Textrahmen, Verschieben, Skalieren und Drehen
+      selbst an; ein Klick auf sie wählt den Text. „Design-Farben und Dunkel-Farbe …“ wählt die Fläche, dann gelten die Bereiche Farbe und Kontur wie
+      bei jeder Form (Design-Farben, eigene Farbe im Dunkeln). Die Kontrastanzeige und „Prüfen“ messen den Text gegen diese Fläche. Auf der Website
+      ist sie ein gewöhnliches Rechteck.</li>
+    <li><b>Bearbeiten auf der Fläche:</b> Schreibmarke, Markierung und der gestrichelte Textrahmen liegen genau auf dem Text – auch zentriert oder
+      rechtsbündig, in Formen, in Gruppen, gedreht oder skaliert und bei jedem Zoom. Bei Text in einer Form folgt die Breite der Form (kein Griff).</li>
     <li><b>Text auf Pfad:</b> Text und Kurve wählen → „Text auf Pfad“, mit Startversatz verschieben, „Vom Pfad lösen“ macht wieder normalen Text.
       <b>In Kurven umwandeln</b> (<kbd>⌘</kbd><kbd>↵</kbd>) macht aus Text Pfade – nur mit einer Schrift, deren Datei auf der Website liegt.</li>
   </ul>
@@ -339,7 +347,13 @@
       ziehen. Verbinder bleiben angeheftet, wenn Sie Formen verschieben oder skalieren.</li>
     <li>In der Kontextleiste: <b>gerade</b>, <b>rechtwinklig</b> oder <b>gebogen</b>, Spitzen am Anfang/Ende (Pfeil, Dreieck, offenes Dreieck, Kreis,
       Raute, Strich) und ihre Größe. Mit dem Auswahlwerkzeug lassen sich die Enden an eine andere Form ziehen und beim rechtwinkligen Verbinder
-      der mittlere Abschnitt verschieben. <b>Doppelklick</b> auf einen Verbinder = Beschriftung (bleibt in der Mitte).</li>
+      der mittlere Abschnitt verschieben.</li>
+    <li id="grafik-beschriftung"><b>Verbinder beschriften:</b> Verbinder mit dem Auswahlwerkzeug anklicken, dann <b>Doppelklick auf die Linie</b> oder
+      <kbd>↵</kbd> und tippen (<kbd>Esc</kbd> beendet). Alternativ das Feld <b>Beschriftung</b> in der Kontextleiste oder Rechtsklick →
+      <b>Beschriftung hinzufügen</b>. Die Beschriftung sitzt in der Mitte der Linie; <b>ziehen</b> verschiebt sie entlang der Linie (sie rastet an der
+      Linie ein und behält ihre Stelle, wenn Sie Formen bewegen). Rechtsklick auf die Beschriftung: <b>bearbeiten</b>, <b>in die Mitte</b>,
+      <b>entfernen</b> (oder das Feld leeren). Eine helle Kontur um die Schrift hält sie auf der Linie lesbar; für eine Fläche dahinter siehe
+      <a href="#grafik-texthintergrund">Hintergrund</a>. Die Statuszeile zeigt diese Tipps, sobald ein Verbinder gewählt ist.</li>
     <li>Wird eine verbundene Form gelöscht, bleibt der Verbinder an seiner Stelle stehen (das Ende ist dann frei); Rückgängig hängt ihn wieder an.</li>
     <li><b>Text in Formen:</b> mit dem Text-Werkzeug in eine gefüllte Form klicken – der Text steht mittig und bricht auf die Breite der Form um,
       auch wenn Sie die Form später verschieben oder größer ziehen. Die Formen des Flussdiagramms und die Karten des Organigramms bringen ihn mit;

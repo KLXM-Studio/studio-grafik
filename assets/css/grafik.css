@@ -195,6 +195,10 @@ html.ge-full, html.ge-full body, html.ge-open body { overflow: hidden }
 .ge-pg--transform { flex: 0 0 auto }
 .ge-pg--transform .ge-pg__panel:not([hidden]) { min-height: 96px }
 .ge-pg--text { flex: 0 0 auto }
+.ge-tbg { border: 0; margin: 8px 0 0; padding: 8px 0 0; border-top: 1px solid var(--adm-line); display: grid; gap: 6px; min-width: 0 }
+.ge-tbg__opts { display: grid; gap: 6px }
+.ge-tbg__opts[hidden] { display: none }
+.ge-tbg__col { padding: 2px; height: 28px; cursor: pointer }
 .ge-pg--text .ge-pg__panel:not([hidden]) { min-height: 96px }
 .ge-pg--text .ge-pg__panel:not([hidden]) { overflow-y: auto }
 .ge-ib--txt { font: 700 12px var(--adm-font); min-width: 34px }
@@ -236,6 +240,7 @@ html.ge-full, html.ge-full body, html.ge-open body { overflow: hidden }
 .ge-cp__chr { height: 20px; margin: 0 }
 .ge-cp__num { display: inline-flex; align-items: center; gap: 3px; width: 72px; justify-content: flex-start; color: var(--adm-t3); font-size: 11px }
 .ge-in--xs { width: 54px }
+.ge-in--m { width: 130px }
 .ge-cp__contrast { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 0; padding: 6px 8px; border-radius: 8px; background: var(--adm-fill); color: var(--adm-t2); font-size: 12px }
 .ge-cp__contrast b { color: var(--adm-ink); font-family: var(--adm-mono, monospace) }
 .ge-cp__bg { display: inline-grid; place-items: center; min-width: 26px; height: 20px; padding: 0 4px; border-radius: 4px; background: var(--c); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .2); font: 800 12px var(--adm-font) }

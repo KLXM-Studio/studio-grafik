@@ -16,6 +16,8 @@ import { num } from './geom.js';
 import { getProp } from './doc.js';
 import { tabGroup, iconBtn, MOD } from './ui.js';
 import { lineHeightOf } from './text.js';
+import { bgState } from './textbg.js';
+import { hex } from './color.js';
 import { fontPicker, firstFamily, styleLabel, fontItems, itemFor } from './fontpicker.js';
 import { fontInfo, parseVariations, fmtVariations } from './outline.js';
 import { FEATURES, RADIO_TAGS, parseFeatures, featureOn, paraOf } from './typo.js';
@@ -52,6 +54,19 @@ export function buildTextPanel(ed) {
     <div class="ge-row4"><label>${esc(t('Breite'))} <span class="ge-cp__num"><input type="number" class="ge-in ge-in--xs" data-tp="sx" min="1" max="1000" step="1" aria-label="${esc(t('Horizontal skalieren in Prozent'))}">%</span></label>
       <label>${esc(t('Höhe'))} <span class="ge-cp__num"><input type="number" class="ge-in ge-in--xs" data-tp="sy" min="1" max="1000" step="1" aria-label="${esc(t('Vertikal skalieren in Prozent'))}">%</span></label></div>
     <p class="ge-note" data-tnote hidden></p>
+    <fieldset class="ge-tbg"><legend class="ge-h3">${esc(t('Hintergrund'))}</legend>
+      <label class="ge-lbl ge-chk"><input type="checkbox" data-bg="on"> ${esc(t('Fläche hinter dem Text'))}</label>
+      <div class="ge-tbg__opts" data-bgopts>
+        <div class="ge-row4"><label>${esc(t('Farbe'))} <input type="color" class="ge-in ge-in--xs ge-tbg__col" data-bg="fill" aria-label="${esc(t('Farbe des Hintergrunds'))}"></label>
+          <label>${esc(t('Deckkraft'))} <span class="ge-cp__num"><input type="number" class="ge-in ge-in--xs" data-bg="opacity" min="0" max="100" step="5" aria-label="${esc(t('Deckkraft des Hintergrunds in Prozent'))}">%</span></label>
+          <label>${esc(t('Innenabstand'))} <input type="number" class="ge-in ge-in--xs" data-bg="p" min="0" max="500" step="1"></label>
+          <label>${esc(t('Eckenradius'))} <input type="number" class="ge-in ge-in--xs" data-bg="r" min="0" max="500" step="1"></label>
+          <label>${esc(t('Rahmen'))} <input type="color" class="ge-in ge-in--xs ge-tbg__col" data-bg="stroke" aria-label="${esc(t('Farbe des Rahmens'))}"></label>
+          <label>${esc(t('Rahmenbreite'))} <input type="number" class="ge-in ge-in--xs" data-bg="sw" min="0" max="100" step="0.5" aria-label="${esc(t('Breite des Rahmens, 0 = ohne'))}"></label></div>
+        <button type="button" class="adm-btn adm-btn--small adm-btn--ghost" data-bgcmd="select">${ico('palette')} ${esc(t('Design-Farben und Dunkel-Farbe …'))}</button>
+        <p class="f-help ge-help">${esc(t('Die Fläche passt sich dem Text an (Länge, Schriftgröße, Drehen). Der Kontrast wird mit ihr geprüft.'))}</p>
+      </div>
+    </fieldset>
   </div>`;
   paraP.innerHTML = `<div class="ge-form">
     <div class="ge-lbl">${esc(t('Ausrichtung'))} <span class="ge-seg" role="radiogroup" aria-label="${esc(t('Ausrichtung'))}">${[['start', 'text-align-left', t('Links')], ['middle', 'text-align-center', t('Mitte')], ['end', 'text-align-right', t('Rechts')], ['justify', 'text-align-justify', t('Blocksatz (nur Textrahmen)')]]
@@ -237,6 +252,18 @@ export function buildTextPanel(ed) {
     const note = q('[data-tnote]');
     note.hidden = !(el && !files[ff] && !/^(system-ui|sans-serif|serif|monospace|Georgia|Arial)$/i.test(ff));
     note.textContent = note.hidden ? '' : t('Für „{font}“ liegt keine Schriftdatei vor – auf der Website erscheint eine Ersatzschrift, „In Kurven umwandeln“ ist nicht möglich.', { font: ff });
+    // Hintergrund
+    const bs0 = bgState(ed.root, el);
+    q('[data-bg=on]').checked = !!el && bs0.on;
+    q('[data-bgopts]').hidden = !el || !bs0.on;
+    if (el && bs0.on) {
+      const setV = (k, v) => { const i = q(`[data-bg=${k}]`); if (document.activeElement !== i) i.value = v; };
+      setV('fill', hex(bs0.fill) || '#ffffff');
+      setV('opacity', Math.round(bs0.opacity * 100));
+      setV('p', num(bs0.p, 2)); setV('r', num(bs0.r, 2));
+      setV('stroke', hex(bs0.stroke) || '#1f2430');
+      setV('sw', bs0.stroke && bs0.stroke !== 'none' ? num(bs0.sw, 2) : 0);
+    }
     // Absatz
     const an = el ? (paraOf(el).al === 'justify' ? 'justify' : getProp(el, 'text-anchor') || 'start') : o.anchor;
     G.el.querySelectorAll('[data-anchor]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.anchor === an)));
@@ -278,6 +305,19 @@ export function buildTextPanel(ed) {
     if (k === 'bshift') return ed.textProp('baseline-shift', +i.value ? num(+i.value, 2) : null);
     if (k === 'sx' || k === 'sy') return ed.textScale(k === 'sx' ? 'x' : 'y', +i.value || 100);
   });
+  // Hintergrund (textbg.js): Farbfelder zeigen während des Ziehens eine Vorschau, übernommen wird beim Loslassen
+  const bgPatch = (k, v) => {
+    if (k === 'opacity') return { opacity: Math.max(0, Math.min(100, +v || 0)) / 100 };
+    if (k === 'p' || k === 'r') return { [k]: Math.max(0, +v || 0) };
+    if (k === 'sw') return +v > 0 ? { stroke: q('[data-bg=stroke]').value, sw: +v } : { stroke: 'none' };
+    if (k === 'stroke') { const sw = +q('[data-bg=sw]').value; return { stroke: v, sw: sw > 0 ? sw : 1 }; }
+    return { [k]: v };
+  };
+  G.el.querySelectorAll('[data-bg]').forEach(i => {
+    if (i.type === 'color') i.addEventListener('input', () => ed.textBg(bgPatch(i.dataset.bg, i.value), false));
+    i.addEventListener('change', () => { const k = i.dataset.bg; ed.textBg(k === 'on' ? { on: i.checked } : bgPatch(k, i.value)); });
+  });
+  q('[data-bgcmd=select]').addEventListener('click', () => ed.selectTextBg());
   G.el.querySelectorAll('[data-tt]').forEach(b => b.addEventListener('click', () => {
     const v = b.dataset.tt, on = b.getAttribute('aria-pressed') === 'true';
     if (v === 'italic') ed.textProp('font-style', on ? null : 'italic');

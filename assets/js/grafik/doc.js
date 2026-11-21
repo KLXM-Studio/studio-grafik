@@ -32,8 +32,9 @@ export function nameOf(el) {
   const n = el.getAttribute('data-name');
   if (n) return n;
   if (el.localName === 'text') {
-    // Zeilen mit eingefügtem Trennstrich (Silbentrennung, data-ge-soft=h) wieder zusammensetzen
-    const s = !el.querySelector('tspan[data-ge-soft="h"]') ? el.textContent.trim().replace(/\s+/g, ' ') : [...el.childNodes].map(n => n.nodeType === 1 && n.getAttribute?.('data-ge-soft') === 'h' ? '\u0000' + n.textContent : n.textContent + ' ').join('')
+    // Zeilen (tspan mit x/dy) mit Leerzeichen verbinden, Zeilen nach eingefügtem Trennstrich (Silbentrennung, data-ge-soft=h) ohne
+    const line = n => n.nodeType === 1 && n.localName === 'tspan' && (n.hasAttribute('x') || n.hasAttribute('dy'));
+    const s = [...el.childNodes].map(n => line(n) ? (n.getAttribute('data-ge-soft') === 'h' ? '\u0000' : ' ') + n.textContent : n.textContent).join('')
       .replace(/-\s*\u0000/g, '').replace(/\u0000/g, '').trim().replace(/\s+/g, ' ');
     if (s) return s.slice(0, 40);
   }

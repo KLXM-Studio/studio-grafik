@@ -10,7 +10,7 @@
  *     a/b  Ende: id@Seite (t, r, b, l, a = automatisch, n3 = Knoten 3) oder @x,y (frei, Koordinaten der Zeichenfläche)
  *     r    straight | ortho | curve      m  Lage des mittleren Abschnitts (0–1, rechtwinklig)
  *     hs/he  Spitze am Anfang/Ende      s  Größe der Spitzen (in Konturbreiten)
- *   <text data-ge-for="verbinder-1">Ja</text>       Beschriftung (bleibt in der Mitte)
+ *   <text data-ge-for="verbinder-1" data-ge-at=…>Ja</text>  Beschriftung (Lage entlang der Linie 0–1, fehlt = Mitte)
  *   <text data-ge-in="kasten-1" data-ge-frame=…>    Text in einer Form (Breite und Lage folgen der Form)
  * Fehlt eine verbundene Form (gelöscht), wird das Ende frei an seiner letzten Stelle. MIT
  */
@@ -18,6 +18,7 @@ import { NS, num, docMatrix, parentMatrix, pt, docBounds, parsePath, toNodes, tr
 import { defs, uid, getProp, setProp } from './doc.js';
 import { hex } from './color.js';
 import { readText, layoutText } from './text.js';
+import { updateBgs } from './textbg.js';
 
 /** Pfeilspitzen: Pfad im Raum 0 0 10 10 (Spitze rechts), ref = Bezugspunkt am Linienende, tip = Spitze */
 export const HEADS = {
@@ -56,7 +57,7 @@ export function writeConn(el, o) {
 }
 
 export class Connectors {
-  constructor(ed) { this.ed = ed; this.fitKeys = new WeakMap(); }
+  constructor(ed) { this.ed = ed; this.fitKeys = new WeakMap(); this.labelPos = new WeakMap(); }
 
   byId(id) { try { return this.ed.root.querySelector('#' + CSS.escape(id)); } catch { return null; } }
 
@@ -212,13 +213,36 @@ export class Connectors {
     } catch { return null; }
   }
 
-  /** Beschriftung in die Mitte des Verbinders */
+  /** Beschriftung eines Verbinders (oder null) */
+  labelOf(conn) {
+    return conn?.id ? this.ed.root.querySelector(`text[data-ge-for="${CSS.escape(conn.id)}"]`) : null;
+  }
+
+  /**
+   * Beschriftung auf den Verbinder setzen: data-ge-at = Lage entlang der Linie (0–1, fehlt = Mitte). Wurde die Beschriftung
+   * verschoben (Ziehen, Pfeiltasten: x/y bzw. transform), rastet sie am nächsten Punkt der Linie ein und merkt sich die Lage –
+   * so bleibt sie an derselben Stelle der Linie, wenn Formen sich bewegen.
+   */
   placeLabel(conn) {
-    const lab = conn.id && this.ed.root.querySelector(`text[data-ge-for="${CSS.escape(conn.id)}"]`);
+    const lab = this.labelOf(conn);
     if (!lab) return;
-    let mid;
-    try { const len = conn.getTotalLength(); mid = conn.getPointAtLength(len / 2); } catch { return; }
-    const P = docMatrix(conn, this.ed.root), q = pt(P, mid.x, mid.y);
+    let len;
+    try { len = conn.getTotalLength(); } catch { return; }
+    if (!(len > 0)) return;
+    const P = docMatrix(conn, this.ed.root);
+    // verschoben? Text wird beim Verschieben über x/y bewegt (sonst transform) – Vergleich mit der zuletzt gesetzten Lage
+    const last = this.labelPos.get(lab);
+    const moved = lab.hasAttribute('transform') || (last && last !== lab.getAttribute('x') + '|' + lab.getAttribute('y'));
+    if (moved) {
+      const b = docBounds(lab, this.ed.root);
+      if (b) {
+        const at = this.nearestOn(conn, P, len, b.x + b.w / 2, b.y + b.h / 2);
+        if (Math.abs(at - 0.5) < 0.02) lab.removeAttribute('data-ge-at'); else lab.setAttribute('data-ge-at', num(at, 4));
+      }
+    }
+    const at = Math.max(0, Math.min(1, parseFloat(lab.getAttribute('data-ge-at') ?? '0.5')));
+    const mid = conn.getPointAtLength(len * (Number.isFinite(at) ? at : 0.5));
+    const q = pt(P, mid.x, mid.y);
     const L = pt(docMatrix(lab.parentNode, this.ed.root).inverse(), q.x, q.y);
     lab.removeAttribute('transform');
     const fs = parseFloat(getProp(lab, 'font-size')) || 14;
@@ -227,6 +251,30 @@ export class Connectors {
       lab.setAttribute('x', x); lab.setAttribute('y', y);
       for (const ts of lab.querySelectorAll(':scope > tspan[x]')) ts.setAttribute('x', x);
     }
+    this.labelPos.set(lab, x + '|' + y);
+  }
+
+  /** Lage (0–1) des Punkts der Linie, der x/y (Zeichenfläche) am nächsten liegt */
+  nearestOn(conn, P, len, x, y) {
+    const N = Math.max(24, Math.min(400, Math.round(len / 4)));
+    let best = 0.5, bd = Infinity;
+    const d = t0 => { const p = conn.getPointAtLength(len * t0), q = pt(P, p.x, p.y); return Math.hypot(q.x - x, q.y - y); };
+    for (let i = 0; i <= N; i++) { const t0 = i / N, dd = d(t0); if (dd < bd) { bd = dd; best = t0; } }
+    // verfeinern
+    let step = 1 / N;
+    for (let k = 0; k < 12; k++) {
+      step /= 2;
+      for (const c of [best - step, best + step]) if (c >= 0 && c <= 1) { const dd = d(c); if (dd < bd) { bd = dd; best = c; } }
+    }
+    return best;
+  }
+
+  /** Beschriftung entfernen */
+  unlabel(conn) {
+    const lab = this.labelOf(conn);
+    if (!lab) return false;
+    lab.remove();
+    return true;
   }
 
   /** Text in einer Form: Rahmenbreite und Lage folgen der Form (waagerecht und senkrecht zentriert) */
@@ -257,15 +305,16 @@ export class Connectors {
     this.fitKeys.set(text, key);
   }
 
-  /** Alle Verbinder, Beschriftungen und Texte in Formen nachführen (vor jedem Zeichnen und vor jedem Protokollschritt) */
+  /** Alle Verbinder, Beschriftungen, Texte in Formen und Hintergründe von Texten nachführen (vor jedem Zeichnen und Protokollschritt) */
   update() {
     const root = this.ed.root;
     if (!root) return;
     const conns = root.querySelectorAll('path[data-ge-conn]');
     const inner = root.querySelectorAll('text[data-ge-in]');
-    if (!conns.length && !inner.length) return;
     for (const t of inner) this.fitInner(t);
     for (const c of conns) { this.route(c); this.placeLabel(c); }
+    // Hintergründe von Texten zuletzt (Text in Formen und Beschriftungen stehen dann schon an ihrer Stelle)
+    updateBgs(root);
   }
 
   // ------------------------------------------------------------------ Anlegen und Ändern
@@ -335,7 +384,7 @@ export class Connectors {
   /** Beschriftung anlegen (oder vorhandene liefern) */
   label(conn, text = 'Text') {
     if (!conn.id) conn.id = uid(this.ed.root, 'verbinder-');
-    let lab = this.ed.root.querySelector(`text[data-ge-for="${CSS.escape(conn.id)}"]`);
+    let lab = this.labelOf(conn);
     if (lab) return lab;
     lab = document.createElementNS(NS, 'text');
     lab.setAttribute('data-ge-for', conn.id);

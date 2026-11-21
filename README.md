@@ -28,6 +28,7 @@ in den Tabellen des Cores.
 |---|---|
 | Mediathek | Menü **Neu**: Infografik (16:9, quadratisch, frei), Bild mit Foto und Text, Aus Vorlage erstellen, Symbol, Blockvorschau, Grafiken verwalten. „Im Grafik-Editor bearbeiten“ im Kontextmenü und im Fenster „Bearbeiten“ (SVGs und Bilder aus dem Editor), „Felder der Vorlage ändern“, Link „Grafik-Ablage“ in der Seitenleiste. |
 | Personas | **Vektor** (Formen, Pfade, Text, Typografie, Verläufe, Masken, Formen kombinieren, Diagramme, Bibliothek), **Bild** (Fotos der Mediathek mit Text als Pixelbild, Formate), **Motion** (Zeitleiste, Bewegung und Interaktion), **Daten** (Werte aus Datentabellen, Zustände wie geöffnet/Tag), **Export** (Bereiche, Favicon und App-Symbole, Social-Vorschau, PDF). |
+| Text und Diagramme | Text direkt auf der Fläche bearbeiten (auch zentriert, in Formen, gedreht, bei jedem Zoom), Textrahmen mit Umbruch, **Hintergrund für Texte** (Farbe, Deckkraft, Innenabstand, Eckenradius, Rahmen), Verbinder zwischen Formen und **Beschriftung von Verbindern** (Doppelklick auf die Linie oder ↵, entlang der Linie verschiebbar). |
 | Grafik-Ablage | `/admin/grafik`: Symbole, Blockvorschauen, eigene Bausteine, Vorlagen zum Ausfüllen – nicht in der Mediathek. |
 | Blockauswahl | „Vorschau gestalten“: Skizze eines Blocks für diese Website zeichnen (Recht „Design“). |
 | Zusammenarbeit | Fassungen, Vergleich, „Verwendet auf“, wer arbeitet gerade an der Grafik. |
@@ -86,6 +87,13 @@ Aufgenommen auf der Demo-Website „Studio Beispiel“ (selbst gezeichnete Forme
 - Übersetzungen: `lang/en.php` – `php bin/console i18n:missing en --extension=grafik` muss 0 melden.
 - Selbsttest: `php bin/console grafik:selftest --site=key` (Editor); die Anzeige prüft der Core mit `graphics:selftest`.
 - Doku: Handbuch → „Grafiken zeichnen und bearbeiten“, Entwicklerhandbuch → „Grafik-Editor (Erweiterung)“ (`docs/`).
+
+## English
+
+Optional graphics editor extension for KLXM Studio: infographics with design colours (light/dark), motion and data, icons,
+block previews, own parts, photo-with-text images, social formats and fill-in templates. Text is edited directly on the canvas;
+texts can have a background (colour, opacity, padding, radius, border); connectors can be labelled (double-click the line or press ↵,
+drag the label along the line). Install with `composer require klxm/studio-grafik`, then `php bin/console extensions:publish`.
 
 ## Lizenz
 

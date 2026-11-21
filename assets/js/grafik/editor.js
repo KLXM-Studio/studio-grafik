@@ -27,7 +27,8 @@ import { parseColor, hex } from './color.js';
 import { h, iconBtn, menu, closeMenus, modal, MOD, ALT, SHIFT, isMac } from './ui.js';
 import { buildPanels } from './panels.js';
 import { TextEditor } from './textedit.js';
-import { readText, layoutText, transformCase, styleRange, mapRange } from './text.js';
+import { readText, layoutText, transformCase, styleRange, mapRange, frameSpan } from './text.js';
+import { isBgRect, bgText, bgRect, setBg } from './textbg.js';
 import { parseFeatures, fmtFeatures, paraOf, setPara, loadHyphens, preloadHyphens, setHyphenModules } from './typo.js';
 import { fontPicker, fontItems, itemFor, WEIGHTS } from './fontpicker.js';
 import { Connectors, isConn, parseConn, HEADS } from './connect.js';
@@ -309,6 +310,16 @@ export class GraphicEditor {
     this.draw();
   }
 
+  /** Statuszeile zur Auswahl: Verbinder und Beschriftungen zeigen, wie man beschriftet */
+  selHint() {
+    const one = this.sel.length === 1 ? this.sel[0] : null;
+    const c = one && this.tool === 'select' ? this.connOf(one) : null;
+    if (c && isConn(one)) this.hint(this.conn.labelOf(c) ? t('Verbinder: Doppelklick oder ↵ = Beschriftung bearbeiten (auch im Feld „Beschriftung“ oben). Beschriftung ziehen = entlang der Linie verschieben.') : t('Verbinder: Doppelklick oder ↵ = beschriften (auch im Feld „Beschriftung“ oben oder per Rechtsklick).'));
+    else if (c) this.hint(t('Beschriftung: Ziehen = entlang der Linie verschieben, Doppelklick oder ↵ = bearbeiten. Rechtsklick: in die Mitte, entfernen.'));
+    else if (this.selHinted) this.hint();
+    this.selHinted = !!c;
+  }
+
   hint(text) { this.$('.ge-status__hint').textContent = text || HINTS[this.tool]?.() || ''; }
 
   // ================================================================= Dokument laden / ausgeben
@@ -488,6 +499,7 @@ export class GraphicEditor {
     this.selMark = this.sel.map(el => this.pathOf(el));
     this.nodeSel.clear();
     if (this.sel[0] && this.scope !== this.root && !this.scope.contains(this.sel[0])) this.scope = this.root;
+    if (!this.textEd) this.selHint();
     this.changed(false);
     this.emit('selection', this.sel);
   }
@@ -499,6 +511,8 @@ export class GraphicEditor {
     if (n.closest?.('defs,clipPath,mask,pattern,marker,symbol')) return null;
     const scope = this.scope.contains(n) ? this.scope : this.root;
     while (n && n.parentNode !== scope) n = n.parentNode;
+    // Hintergrund eines Texts: wählt den Text (das Rechteck folgt ihm)
+    if (isBgRect(n)) { const tx = bgText(this.root, n); if (tx && tx.parentNode === n.parentNode) n = tx; }
     if (!n || !isDrawn(n) || isLocked(n) || isHidden(n)) return null;
     return n;
   }
@@ -589,15 +603,23 @@ export class GraphicEditor {
     }
   }
 
-  /** Rahmen eines Textrahmens (Breite data-ge-frame) mit Griff rechts */
+  /**
+   * Rahmen eines Textrahmens (Breite data-ge-frame) mit Griff – die Lage folgt der Ausrichtung (x = linke Kante, Mitte oder
+   * rechte Kante, frameSpan). Griff rechts (bei „rechts“ links); Text in einer Form: Breite folgt der Form, kein Griff.
+   */
   drawTextFrame(el) {
     let b; try { b = el.getBBox(); } catch { return ''; }
-    const w = parseFloat(el.getAttribute('data-ge-frame')) || 0, x = parseFloat((el.getAttribute('x') || '0').split(/[\s,]+/)[0]) || 0;
+    const f = frameSpan(el);
+    if (!f) return '';
     const M = docMatrix(el, this.root), S = (px, py) => this.toOv(pt(M, px, py));
     const y0 = b.y, y1 = b.y + Math.max(b.height, 1);
-    const c = [S(x, y0), S(x + w, y0), S(x + w, y1), S(x, y1)];
-    const hp = S(x + w, (y0 + y1) / 2);
-    return `<polygon class="ge-ov__tframe" points="${c.map(p => p.x + ',' + p.y).join(' ')}"/><rect class="ge-ov__h ge-ov__tfh" data-h="tfw" x="${hp.x - 4}" y="${hp.y - 8}" width="8" height="16" rx="2"/>`;
+    const c = [S(f.x0, y0), S(f.x1, y0), S(f.x1, y1), S(f.x0, y1)];
+    let s = `<polygon class="ge-ov__tframe" points="${c.map(p => p.x + ',' + p.y).join(' ')}"/>`;
+    if (!el.hasAttribute('data-ge-in')) {
+      const hp = S(f.anchor === 'end' ? f.x0 : f.x1, (y0 + y1) / 2);
+      s += `<rect class="ge-ov__h ge-ov__tfh" data-h="tfw" x="${hp.x - 4}" y="${hp.y - 8}" width="8" height="16" rx="2"/>`;
+    }
+    return s;
   }
 
   drawSelection() {
@@ -840,11 +862,14 @@ export class GraphicEditor {
     const el = this.textEl || this.sel[0];
     if (!el || el.localName !== 'text') return;
     const Mi = docMatrix(el, this.root).inverse();
-    const x = parseFloat((el.getAttribute('x') || '0').split(/[\s,]+/)[0]) || 0;
+    const f = frameSpan(el);
+    if (!f) return;
     const fs = parseFloat(getProp(el, 'font-size')) || 16;
     this.track(e, p => {
+      // gegenüberliegende Kante (links bzw. bei „rechts“ die rechte) bleibt; zentriert wächst der Rahmen zu beiden Seiten
       const q = pt(Mi, p.x, p.y);
-      this.setTextFrame(el, Math.max(fs, q.x - x), false);
+      const w = f.anchor === 'middle' ? 2 * (q.x - f.x) : f.anchor === 'end' ? f.x - q.x : q.x - f.x;
+      this.setTextFrame(el, Math.max(fs, w), false);
       this.draw();
     }, () => this.commit(t('Textrahmen geändert')));
   }
@@ -1272,9 +1297,45 @@ export class GraphicEditor {
 
   /** Beschriftung eines Verbinders anlegen bzw. bearbeiten */
   connLabel(c) {
-    const isNew = !this.root.querySelector(`text[data-ge-for="${CSS.escape(c.id || '-')}"]`);
+    const isNew = !this.conn.labelOf(c);
     const lab = this.conn.label(c, isNew ? '' : undefined);
     this.beginText(lab, isNew);
+  }
+
+  /** Beschriftung eines Verbinders setzen (Feld in der Kontextleiste) – leer = entfernen */
+  connLabelSet(c, text) {
+    text = String(text ?? '').replace(/\s+/g, ' ').trim();
+    if (!text) return this.connUnlabel(c);
+    const had = this.conn.labelOf(c);
+    const lab = this.conn.label(c, '');
+    lab.textContent = text;
+    this.conn.placeLabel(c);
+    this.sel = [c];
+    this.commit(had ? t('Beschriftung geändert') : t('Beschriftung hinzugefügt'));
+  }
+
+  /** Beschriftung eines Verbinders entfernen */
+  connUnlabel(c) {
+    if (!this.conn.unlabel(c)) return;
+    if (this.sel.some(x => !this.root.contains(x))) this.sel = [c];
+    this.commit(t('Beschriftung entfernt'));
+  }
+
+  /** Beschriftung zurück in die Mitte der Linie */
+  connLabelCenter(c) {
+    const lab = this.conn.labelOf(c);
+    if (!lab) return;
+    lab.removeAttribute('data-ge-at');
+    this.conn.placeLabel(c);
+    this.commit(t('Beschriftung in der Mitte'));
+  }
+
+  /** Verbinder zu einer Beschriftung (oder der Verbinder selbst) */
+  connOf(el) {
+    if (isConn(el)) return el;
+    const id = el?.getAttribute?.('data-ge-for');
+    const c = id && this.root.querySelector(`#${CSS.escape(id)}`);
+    return isConn(c) ? c : null;
   }
 
   /** Einstellungen der ausgewählten Verbinder (Kontextleiste) bzw. Vorgabe für neue */
@@ -1811,12 +1872,21 @@ export class GraphicEditor {
     const curvable = sel.some(el => ['rect', 'ellipse', 'circle', 'polygon', 'polyline', 'line', 'text'].includes(el.localName) || el.querySelector?.('text'));
     const clipped = sel.some(el => clipOf(el.closest('clipPath,mask')?.parentNode || el, this.root));
     const allLocked = n && sel.every(isLocked);
+    // Verbinder bzw. seine Beschriftung: Beschriftung hinzufügen, bearbeiten, in die Mitte, entfernen
+    const lc = n === 1 ? this.connOf(sel[0]) : null, lab = lc && this.conn.labelOf(lc);
+    const labelItems = lc ? [
+      { label: lab ? t('Beschriftung bearbeiten') : t('Beschriftung hinzufügen'), key: '↵', run: () => this.connLabel(lc) },
+      ...(lab && lab.hasAttribute('data-ge-at') ? [{ label: t('Beschriftung in die Mitte'), run: () => this.connLabelCenter(lc) }] : []),
+      ...(lab ? [{ label: t('Beschriftung entfernen'), run: () => this.connUnlabel(lc) }] : []),
+      { sep: true },
+    ] : [];
     const items = !n ? [
       { label: t('Einfügen'), key: MOD + 'V', disabled: !this.clip?.length, run: () => this.paste() },
       { label: t('Alles auswählen'), key: MOD + 'A', run: () => this.selectAll() },
       { sep: true },
       { label: t('Ganze Grafik zeigen'), run: () => this.fit() },
     ] : [
+      ...labelItems,
       { label: t('Ausschneiden'), key: MOD + 'X', run: () => this.copy(true) },
       { label: t('Kopieren'), key: MOD + 'C', run: () => this.copy() },
       { label: t('Einfügen'), key: MOD + 'V', disabled: !this.clip?.length, run: () => this.paste() },
@@ -1893,6 +1963,29 @@ export class GraphicEditor {
     }
     if (this.textEd) { this.textEd.dirty = true; this.textEd.before = null; this.draw(); this.panels.refresh(); return; }
     this.commit(t('Schrift geändert'));
+  }
+
+  /**
+   * Hintergrund der gewählten Texte (textbg.js): { on, p, r, fill, opacity, stroke, sw }. commit = false: nur Vorschau (Regler).
+   */
+  textBg(patch, commit = true) {
+    const list = this.textEl ? [this.textEl] : this.sel.filter(el => el.localName === 'text');
+    if (!list.length) return;
+    for (const el of list) setBg(this.root, el, patch);
+    if (this.textEd) { this.textEd.dirty = true; this.textEd.before = null; }
+    if (!commit) { this.draw(); return; }
+    if (this.textEd) { this.draw(); this.panels.refresh(); return; }
+    this.commit(patch.on === false ? t('Texthintergrund entfernt') : patch.on ? t('Texthintergrund hinzugefügt') : t('Texthintergrund geändert'));
+  }
+
+  /** Rechteck des Texthintergrunds auswählen – Farbe, Design-Farben, Dunkel-Farbe und Kontur dann in den Bereichen wie bei jeder Form */
+  selectTextBg() {
+    const el = this.textEl || this.sel.find(x => x.localName === 'text');
+    const r = el && bgRect(this.root, el);
+    if (!r) return;
+    this.endText();
+    this.select([r]);
+    this.hint(t('Texthintergrund gewählt: Füllung und Kontur wie bei einer Form ändern. Klick auf den Text wählt wieder den Text.'));
   }
 
   /**
@@ -2474,6 +2567,7 @@ export class GraphicEditor {
       if (e.key === 'Enter' && e.target.closest?.('.ge-stage') && this.sel.length === 1) {
         const el = this.sel[0];
         if (el.localName === 'text') { e.preventDefault(); this.beginText(el); return; }
+        if (isConn(el)) { e.preventDefault(); this.connLabel(el); return; }
         if (['g', 'switch'].includes(el.localName)) { e.preventDefault(); this.scope = el; this.select(drawnChildren(el).slice(0, 1)); return; }
       }
       if ((e.key === 'Backspace' || e.key === 'Delete') && (e.target.closest?.('.ge-stage') || e.target === document.body || e.target.closest?.('.ge-layers'))) {
@@ -2590,7 +2684,12 @@ export class GraphicEditor {
         + `<label class="ge-ctx__f">${esc(t('Anfang'))} <select class="ge-in" data-conn-h="hs">${headOpts(co.hs)}</select></label>`
         + `<label class="ge-ctx__f">${esc(t('Ende'))} <select class="ge-in" data-conn-h="he">${headOpts(co.he)}</select></label>`
         + `<label class="ge-ctx__f">${esc(t('Spitzengröße'))} <input type="number" class="ge-in ge-in--s" data-conn-s value="${esc(num(co.s, 1))}" min="1" max="20" step="0.5"></label>`
-        + (conns.length === 1 ? `<button type="button" class="adm-btn adm-btn--small adm-btn--ghost" data-cmd="connlabel">${ico('text-t')} ${esc(t('Beschriftung'))}</button>` : '');
+        + (conns.length === 1 ? (() => {
+          const lab = this.conn.labelOf(conns[0]);
+          return `<label class="ge-ctx__f" title="${esc(t('Doppelklick auf die Linie oder ↵ beschriftet direkt auf der Fläche. Die Beschriftung lässt sich entlang der Linie ziehen.'))}">${esc(t('Beschriftung'))} <input type="text" class="ge-in ge-in--m" data-conn-label maxlength="200" value="${esc(lab ? lab.textContent.replace(/\s+/g, ' ').trim() : '')}" placeholder="${esc(t('z. B. Ja'))}"></label>`
+            + iconBtn('text-t', t('Auf der Fläche beschriften (Doppelklick auf die Linie, ↵)'), 'data-cmd="connlabel"')
+            + (lab ? iconBtn('trash', t('Beschriftung entfernen'), 'data-cmd="connunlabel"') : '');
+        })() : '');
     }
     // Baum anordnen: eine Form, an der Verbinder hängen
     if (n === 1 && !isConn(this.sel[0]) && this.sel[0].id && this.root.querySelector(`path[data-ge-conn*="a=${CSS.escape(this.sel[0].id)}@"]`)) {
@@ -2706,6 +2805,12 @@ export class GraphicEditor {
     ctx.querySelectorAll('[data-conn-h]').forEach(s => s.addEventListener('change', () => this.connSet({ [s.dataset.connH]: s.value })));
     ctx.querySelector('[data-conn-s]')?.addEventListener('change', e => this.connSet({ s: Math.max(1, Math.min(20, +e.target.value || 4)) }));
     ctx.querySelector('[data-cmd=connlabel]')?.addEventListener('click', () => this.connLabel(this.sel[0]));
+    ctx.querySelector('[data-cmd=connunlabel]')?.addEventListener('click', () => this.connUnlabel(this.sel[0]));
+    const cl = ctx.querySelector('[data-conn-label]');
+    if (cl) {
+      cl.addEventListener('change', () => this.connLabelSet(this.sel[0], cl.value));
+      cl.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); cl.blur(); } if (e.key === 'Escape') { cl.value = this.conn.labelOf(this.sel[0])?.textContent || ''; cl.blur(); } });
+    }
     ctx.querySelector('[data-cmd=treedown]')?.addEventListener('click', () => this.arrangeTree('down'));
     ctx.querySelector('[data-cmd=treeright]')?.addEventListener('click', () => this.arrangeTree('right'));
   }

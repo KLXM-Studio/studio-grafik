@@ -1,5 +1,28 @@
 # Changelog – Grafik-Editor (`klxm/studio-grafik`)
 
+## 1.1.0 (2026-11-22)
+
+- Behoben: Beim Bearbeiten eines zentrierten oder rechtsbündigen Texts mit Textrahmen – vor allem bei Text in Formen („Start“ in einem
+  Rechteck) – begann der gestrichelte Rahmen in der Mitte des Texts und ragte rechts aus der Form. Der Rahmen liegt jetzt je nach Ausrichtung
+  links, mittig oder rechts (`frameSpan()`), die Breite zieht sich bei „Mitte“ zu beiden Seiten, bei „Rechts“ am linken Griff; Text in Formen
+  hat keinen Breitengriff mehr (die Breite folgt der Form). Klicks im Rahmen gelten auch links vom Ankerpunkt.
+- Behoben: Das unsichtbare Eingabefeld (Wortvorschläge, Bildschirmtastatur auf Telefon/Tablet) blieb nach Klick in den Text, Zoom oder
+  Verschieben der Ansicht an der alten Stelle – es folgt jetzt bei jedem Zeichnen der Schreibmarke.
+- Behoben: Ebenenname eines umbrochenen Texts ohne Leerzeichen zwischen den Zeilen („mitUmbruch“).
+- Neu: **Verbinder beschriften** leichter auffindbar und vollständig: ↵ auf einem gewählten Verbinder, Doppelklick auf die Linie,
+  Feld „Beschriftung“ in der Kontextleiste, Kontextmenü „Beschriftung hinzufügen/bearbeiten/in die Mitte/entfernen“, Tipp in der Statuszeile.
+  Die Beschriftung lässt sich **entlang der Linie ziehen** (rastet ein, `data-ge-at`) und bleibt an ihrer Stelle, wenn Formen sich bewegen.
+- Neu: **Hintergrund für Texte** (Bereich Zeichen → Hintergrund): Fläche hinter freiem Text, Text in Formen und Beschriftungen mit Farbe,
+  Deckkraft, Innenabstand, Eckenradius und Rahmen; passt sich Text, Schriftgröße, Textrahmen, Verschieben, Skalieren und Drehen an, wandert
+  beim Kopieren/Einfügen mit, wird mit dem Text gelöscht. Auf der Website ein gewöhnliches Rechteck; Kontrastanzeige und „Prüfen“ messen gegen
+  die Fläche; Design- und Dunkel-Farben über „Design-Farben und Dunkel-Farbe …“.
+- Selbsttest `grafik:selftest`: Beschriftung, Text in Formen und Texthintergrund überstehen die Arbeitsfassung (`Core\Svg` mit `editor`),
+  die Web-Fassung enthält nur das Rechteck.
+
+English: fixed the offset text frame when editing centred/right-aligned text (notably text inside shapes); the hidden input now follows the
+caret (IME/on-screen keyboard). New: connector labels via ↵, double-click, context bar field and context menu, draggable along the line; text
+background (colour, opacity, padding, corner radius, border) that follows the text and is checked for contrast.
+
 ## 1.0.1 (2026-11-21)
 
 - Behoben: Alt-Text-Vorschlag (Vorlage ausfüllen, Prüfen) verband umbrochene Textzeilen ohne Leerzeichen („Werkstattfestam See“).
