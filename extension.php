@@ -31,7 +31,7 @@ use Klxm\Grafik\Templates;
 return [
     'name' => 'grafik',
     'label' => 'Grafik-Editor – Infografiken, Symbole, Bilder mit Foto und Text',
-    'version' => '1.0.0',
+    'version' => '1.0.1',
     'requires' => '>=1.0.0',
     'description' => 'Grafiken direkt in der Verwaltung zeichnen und bearbeiten: Infografiken mit Design-Farben, Bewegung und Daten, Symbole, Blockvorschauen, eigene Bausteine, Bilder mit Foto und Text, Formate für soziale Netzwerke und Vorlagen zum Ausfüllen.',
     'author' => 'KLXM Crossmedia GmbH and contributors',

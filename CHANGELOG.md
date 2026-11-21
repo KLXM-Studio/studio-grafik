@@ -1,5 +1,9 @@
 # Changelog – Grafik-Editor (`klxm/studio-grafik`)
 
+## 1.0.1 (2026-11-21)
+
+- Behoben: Alt-Text-Vorschlag (Vorlage ausfüllen, Prüfen) verband umbrochene Textzeilen ohne Leerzeichen („Werkstattfestam See“).
+
 ## 1.0.0
 
 Erste Fassung als eigenes Paket. Bis dahin war der Grafik-Editor Teil des Cores von KLXM Studio (Ausbaustufen 1–6, siehe

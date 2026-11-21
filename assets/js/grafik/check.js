@@ -16,6 +16,7 @@ import { getProp, isHidden, nameOf, typeLabel } from './doc.js';
 import { parseColor, toHex, contrast, over } from './color.js';
 import { paintIn, sectionBg } from './scheme.js';
 import { modal } from './ui.js';
+import { plainText } from './bild.js';
 
 const SKIP = 'defs,clipPath,mask,marker,symbol,pattern,title,desc,metadata';
 const SHAPES = 'rect,circle,ellipse,path,polygon,polyline,line';
@@ -56,7 +57,7 @@ const scaleOf = (el, root) => { const m = docMatrix(el, root); return Math.sqrt(
 /** Vorschlag für den Alt-Text: Titel, sonst die Texte der Grafik in Lesereihenfolge (gekürzt) */
 export function suggestAlt(ed) {
   const title = [...ed.root.children].find(c => c.localName === 'title')?.textContent.trim() || '';
-  const texts = readingOrder(ed).map(x => x.textContent.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  const texts = readingOrder(ed).map(x => plainText(x)).filter(Boolean);
   let s = title || texts.slice(0, 1).join('');
   const rest = texts.filter(x => x !== s).slice(0, 6).join(', ');
   if (rest) s = (s ? s + ': ' : '') + rest;

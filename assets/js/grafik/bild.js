@@ -27,12 +27,22 @@ const H_LABEL = { l: () => t('links'), c: () => t('Mitte'), r: () => t('rechts')
 const V_LABEL = { t: () => t('oben'), m: () => t('Mitte'), b: () => t('unten'), s: () => t('Höhe wächst mit') };
 
 /** Alt-Text-Vorschlag aus den Textebenen des Hauptformats (Lesereihenfolge: von oben, links nach rechts) */
+/** Lesbarer Text eines <text>: umbrochene Zeilen (tspan mit x oder dy) mit Leerzeichen trennen, sonst klebten sie zusammen */
+export function plainText(el) {
+  let out = '';
+  for (const n of el.childNodes) {
+    if (n.nodeType === 1 && n.localName === 'tspan' && (n.hasAttribute('dy') || n.hasAttribute('x')) && out !== '') out += ' ';
+    out += n.nodeType === 1 && n.querySelector?.('tspan') ? plainText(n) : n.textContent;
+  }
+  return out.replace(/\s+/g, ' ').trim();
+}
+
 export function altFromTexts(root) {
   const base = baseBox(root);
   const list = [...root.querySelectorAll('text')].filter(x => !x.closest('[data-ge-board],defs,clipPath,mask') && x.getAttribute('display') !== 'none' && !x.closest('[display=none]'))
     .map(el => ({ el, b: docBounds(el, root) })).filter(x => x.b && x.b.x < base.x + base.w && x.b.y < base.y + base.h);
   list.sort((a, b) => Math.abs(a.b.y - b.b.y) > base.h / 40 ? a.b.y - b.b.y : a.b.x - b.b.x);
-  const parts = [...new Set(list.map(x => x.el.textContent.replace(/\s+/g, ' ').trim()).filter(Boolean))];
+  const parts = [...new Set(list.map(x => plainText(x.el)).filter(Boolean))];
   const s = parts.join(' – ');
   return s.length > 240 ? s.slice(0, 237).replace(/\s+\S*$/, '') + ' …' : s;
 }
