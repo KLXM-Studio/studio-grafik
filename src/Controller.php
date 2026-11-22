@@ -53,6 +53,10 @@ final class Controller extends AdminController
     {
         $this->auth($r, 'media.upload');
         $boot = $this->bootData($r);
+        // Markierungen im eingebetteten Fenster: Hinweis mit „Schließen“ statt Weiterleitung (shell.js)
+        if (isset($boot['error']) && $r->str('format') === 'hotspots') {
+            return Grafik::page('editor', ['css' => ['css/grafik.css'], 'boot' => ['error' => $boot['error'], 'doc' => ['format' => 'hotspots']], 'title' => __('Grafik-Editor')]);
+        }
         if (isset($boot['error']) || isset($boot['denied'])) {
             return $this->back('/admin/media', 'error', (string) ($boot['denied'] ?? $boot['error']));
         }
@@ -73,6 +77,7 @@ final class Controller extends AdminController
      *   media={id}   SVG aus der Mediathek (Ziel: Mediathek, neue Fassung derselben Datei)
      *   id={id}      Grafik der eigenen Ablage
      *   format=info|icon|preview (+ w, h bei Infografik, block bei Blockvorschau) → leere Fläche bzw. Vorschau des Kits als Vorlage
+     *   format=hotspots&media={id}   Markierungen auf einem Bild (Interaktives Bild, hotspotsBoot) – Ziel: das Feld (postMessage)
      */
     private function bootData(Request $r): array
     {
@@ -80,9 +85,20 @@ final class Controller extends AdminController
             'id' => null, 'block' => null, 'ref' => null];
         $mediaId = (int) $r->str('media');
         $id = (int) $r->str('id');
+        // Interaktives Bild (Feld „Markierungen“ des Cores, Extension::hotspotEditor): Bild als feste Grundlage, Markierungen kommen
+        // per postMessage vom Feld (init) und gehen dorthin zurück (apply) – hier wird nichts gespeichert
+        $hs = null;
+        if ($r->str('format') === 'hotspots') {
+            $hs = Hotspots::boot($mediaId);
+            if (isset($hs['error'])) return $hs;
+            $doc = $hs['doc'];
+            $mediaId = 0;
+        }
         // Bild aus dem Grafik-Editor (Persona Bild): „Bearbeiten“ in der Mediathek öffnet die Arbeitsfassung
         if ($mediaId > 0 && ($cid = Compose::forMedia($mediaId))) { $id = $cid; $mediaId = 0; }
-        if ($mediaId > 0) {
+        if ($hs) {
+            // Markierungen: Dokument steht schon (hotspotsBoot)
+        } elseif ($mediaId > 0) {
             $m = Media::find($mediaId);
             if (!$m || ($m['mime'] ?? '') !== Svg::MIME) return ['error' => __('Nur SVG-Grafiken lassen sich im Grafik-Editor bearbeiten.')];
             $raw = @file_get_contents(Media::path($m));
@@ -131,7 +147,7 @@ final class Controller extends AdminController
                 'name' => $block ? (string) ($blocks[$block] ?? $block) : ''] + $doc;
         }
         $doc['versions'] = $doc['ref'] ? Graphics::versions((string) $doc['ref']) : [];
-        return [
+        return ($hs ? ['hs' => $hs['hs']] : []) + [
             'doc' => $doc,
             'formats' => Graphics::FORMATS,
             'formatLabels' => Graphics::formatLabels(),

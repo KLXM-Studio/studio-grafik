@@ -219,6 +219,24 @@
   </ol>
   <p>Die fertigen Bilder stehen danach ausgewählt in der Mediathek. <b>Felder der Vorlage ändern …</b> (Rechtsklick auf das Bild) öffnet das Formular mit den
     bisherigen Werten wieder – Speichern ersetzt die Bilder, ihre Verwendungen bleiben.</p>
+  <h3 id="grafik-markierungen">Markierungen für ein interaktives Bild</h3>
+  <p>Im Block <b>Interaktives Bild</b> (und in Datentabellen mit Markierungen) steht über den Markierungen der Knopf <b>Im Grafik-Editor öffnen</b>
+    (Recht <b>Dateien hochladen und bearbeiten</b>). Er öffnet das gewählte Bild im Grafik-Editor – das Bild ist die feste Grundlage und lässt sich weder
+    verschieben noch löschen. Ohne Bild erscheint der Hinweis, zuerst eines zu wählen.</p>
+  <table class="doc-table">
+    <tr><th>Werkzeug</th><th>Taste</th><th>So geht es</th></tr>
+    <tr><td>Verschieben</td><td><kbd>V</kbd></td><td>Markierung wählen und ziehen, an den Griffen die Größe ändern (Kreise bleiben rund, Punkte haben keine Größe). Pfeiltasten verschieben um ein Pixel des Bildes, mit <kbd>⇧</kbd> um zehn; <kbd>⇥</kbd> wählt die nächste Markierung, <kbd>⌫</kbd> löscht. Doppelklick auf eine Fläche zeigt ihre Eckpunkte, auf andere Markierungen springt er zu den Angaben.</td></tr>
+    <tr><td>Eckpunkte</td><td><kbd>A</kbd></td><td>Eckpunkte einer Fläche ziehen, Klick auf eine Kante fügt einen ein, <kbd>⌫</kbd> löscht ihn.</td></tr>
+    <tr><td>Punkt</td><td><kbd>K</kbd></td><td>Klick setzt einen Punkt mit Nummer; gedrückt halten und ziehen verschiebt ihn gleich.</td></tr>
+    <tr><td>Kreis</td><td><kbd>E</kbd></td><td>Ziehen zeichnet einen Kreis (<kbd>⌥</kbd> = von der Mitte aus).</td></tr>
+    <tr><td>Rechteck</td><td><kbd>R</kbd></td><td>Ziehen zeichnet ein Rechteck (<kbd>⇧</kbd> = Quadrat).</td></tr>
+    <tr><td>Fläche (Vieleck)</td><td><kbd>P</kbd></td><td>Klick für Klick die Eckpunkte setzen; Klick auf den ersten Punkt, <kbd>↵</kbd> oder <kbd>Esc</kbd> schließt die Fläche (mindestens drei Eckpunkte).</td></tr>
+  </table>
+  <p>Rechts stehen alle Markierungen in der Reihenfolge ihrer <b>Nummer</b> – mit den Pfeilen ändern Sie die Reihenfolge, die Besucher auch mit der Tab-Taste
+    durchgehen. Für die gewählte Markierung tragen Sie <b>Titel</b>, <b>Text</b>, einen <b>Link</b> (über die gewohnte Linkauswahl), einen
+    <b>Glossar-Begriff</b> (wenn das Glossar eingeschaltet ist) und ein <b>Symbol</b> statt der Nummer ein. <b>Übernehmen</b> schreibt die Markierungen in das
+    Formular des Blocks – gespeichert wird wie immer mit <b>Speichern</b> bzw. <b>Veröffentlichen</b>. <b>Abbrechen</b> verwirft die Änderungen (mit Rückfrage).
+    Rückgängig und Wiederholen gelten auch für die Angaben.</p>
   <h3 id="grafik-stile">Objektstile und Zeichenflächen</h3>
   <p><b>Objektstile</b> (Bereich <b>Darstellung</b>, unten): <b>Stil aus Auswahl …</b> merkt sich das Aussehen des gewählten Objekts – Füllung, Kontur
     (Farbe, Stärke, Strichmuster, Enden, Ecken), Deckkraft, Mischmodus und Ebeneneffekte – unter einem Namen. <b>Anwenden</b> gibt anderen Objekten

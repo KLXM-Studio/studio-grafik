@@ -31,14 +31,14 @@ use Klxm\Grafik\Templates;
 return [
     'name' => 'grafik',
     'label' => 'Grafik-Editor – Infografiken, Symbole, Bilder mit Foto und Text',
-    'version' => '1.1.0',
+    'version' => '1.2.0',
     'requires' => '>=1.0.0',
     'description' => 'Grafiken direkt in der Verwaltung zeichnen und bearbeiten: Infografiken mit Design-Farben, Bewegung und Daten, Symbole, Blockvorschauen, eigene Bausteine, Bilder mit Foto und Text, Formate für soziale Netzwerke und Vorlagen zum Ausfüllen.',
     'author' => 'KLXM Crossmedia GmbH and contributors',
     'license' => 'MIT',
     'homepage' => 'https://studio.klxm.de',
     'provides' => ['Mediathek: Menü „Neu“ (Infografik, Bild mit Foto und Text, Aus Vorlage, Symbol, Blockvorschau), „Im Grafik-Editor bearbeiten“, Link „Grafik-Ablage“',
-        'Seiten /admin/grafik (Grafik-Ablage) und /admin/grafik/editor', 'Blockauswahl: „Vorschau gestalten“', 'Recht „Vorlagen für Bilder gestalten“', 'Befehl grafik:selftest'],
+        'Seiten /admin/grafik (Grafik-Ablage) und /admin/grafik/editor', 'Blockauswahl: „Vorschau gestalten“', 'Interaktives Bild: „Im Grafik-Editor öffnen“ (Markierungen zeichnen)', 'Recht „Vorlagen für Bilder gestalten“', 'Befehl grafik:selftest'],
     'commands' => ['grafik:selftest'],
     'usage' => function (): ?string {
         try {
@@ -109,6 +109,11 @@ return [
         // Blockauswahl: „Vorschau gestalten“ (Blockvorschauen gelten für die ganze Website: design.edit)
         $x->previewEditor(fn(): ?array => Graphics::canKind('preview') ? ['url' => url('/admin/grafik/editor'), 'label' => __('Vorschau gestalten'),
             'title' => __('Vorschaugrafik dieses Blocks für diese Website zeichnen')] : null);
+
+        // Interaktives Bild (Feld „Markierungen“): „Im Grafik-Editor öffnen“ – Punkte und Flächen auf dem Bild zeichnen (Modus
+        // format=hotspots, Austausch per postMessage mit dem Feld; gespeichert wird mit dem Formular des Cores)
+        $x->hotspotEditor(fn(): ?array => can('media.upload') ? ['url' => url('/admin/grafik/editor'), 'label' => __('Im Grafik-Editor öffnen'),
+            'title' => __('Punkte, Kreise, Rechtecke und Flächen im Grafik-Editor auf das Bild zeichnen'), 'icon' => 'pen-nib'] : null);
 
         $x->docs('manual', ['grafik' => ['id' => 'grafik-editor', 'title' => 'Grafiken zeichnen und bearbeiten (Grafik-Editor)', 'after' => 'medien', 'file' => __DIR__ . '/docs/manual.php']]);
         $x->docs('technical', ['grafik' => ['title' => 'Grafik-Editor (Erweiterung)', 'part' => 2, 'after' => 'medien', 'file' => __DIR__ . '/docs/technical.php']]);

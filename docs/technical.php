@@ -6,7 +6,7 @@
   <h3 id="grafik-paket">Aufbau des Pakets und Andockstellen</h3>
   <ul>
     <li><b>Dateien:</b> <code>extension.php</code> (Manifest, Routen, Haken), <code>src/</code> (<code>Graphics</code> Ablage und Speichern,
-      <code>Compose</code> Bilder mit Foto und Text, <code>Templates</code> Vorlagen, <code>Library</code> Bibliothek, <code>Shared</code>
+      <code>Compose</code> Bilder mit Foto und Text, <code>Templates</code> Vorlagen, <code>Hotspots</code> Markierungen für das interaktive Bild, <code>Library</code> Bibliothek, <code>Shared</code>
       Bausteine für alle Websites, <code>Controller</code> Seiten und JSON-API, <code>Grafik</code> Anbindung, <code>SelfTest</code>),
       <code>views/</code>, <code>lang/en.php</code>, <code>docs/</code>, <code>assets/</code> (Quellen) und <code>public/</code> (gebaut,
       <code>php bin/console extensions:publish</code> legt sie nach <code>public/assets/ext/grafik</code>).</li>
@@ -24,12 +24,31 @@
     <li><b>Blockauswahl:</b> <code>previewEditor()</code> (nur mit <code>design.edit</code>) – „Vorschau gestalten“ öffnet
       <code>/admin/grafik/editor?format=preview&amp;block=…&amp;embed=1</code>; die Seite meldet sich mit
       <code>postMessage({source: 'klxm-preview-editor', type: 'saved' | 'close', …})</code>.</li>
+    <li><b>Interaktives Bild:</b> <code>hotspotEditor()</code> (nur mit <code>media.upload</code>) – „Im Grafik-Editor öffnen“ im Feld „Markierungen“
+      (<code>Core\Hotspots</code>) öffnet <code>/admin/grafik/editor?format=hotspots&amp;media={id}&amp;embed=1</code>. <code>Klxm\Grafik\Hotspots::boot()</code>
+      legt ein SVG in Bildgröße an (<code>viewBox</code> = Breite × Höhe der Mediathek wie <code>Hotspots::render</code>, ohne Angaben 1000 × 1000) mit dem Bild
+      als <code>&lt;image data-hs-base data-locked="1"&gt;</code> und rendert die Felder der Seitenleiste mit <code>Core\Fields</code> (Rich-Text, Linkauswahl,
+      Glossar, Symbolauswahl). <code>shell.js</code> meldet <code>{source: 'klxm-hotspot-editor', type: 'ready'}</code>, nimmt <code>init</code> nur vom
+      Fenster darüber mit gleicher Herkunft an und sendet <code>apply</code> (mit <code>close: true</code>) bzw. <code>close</code>. Gespeichert wird nichts.</li>
     <li><b>Präsenz:</b> Filter <code>presence.object</code> für die Art <code>graphic</code> (<code>media:{id}</code>, <code>graphic:{id}</code>).</li>
     <li><b>Rechte:</b> <code>graphics.templates</code> („Vorlagen für Bilder gestalten“) meldet das Paket an (<code>permissions()</code>); Rollen, die es
       schon hatten, behalten es. Blockvorschauen <code>design.edit</code>, Symbole und Bausteine <code>blocks.build</code>.</li>
     <li><b>Daten</b> bleiben im Core (Tabellen <code>graphics</code>, <code>graphic_versions</code>, <code>graphic_sources</code>,
       <code>graphic_media</code>, <code>graphic_shared</code>; Einstellungen <code>block_previews</code>, <code>graphic_text_styles</code>;
       persönliche Einstellungen <code>ui_prefs.grafik</code>) – das Paket hat keine eigenen Tabellen und keine Migrationen.</li>
+  </ul>
+  <h3 id="grafik-markierungen-technik">Modus „Markierungen“ (<code>assets/js/grafik/hotspots.js</code>)</h3>
+  <ul>
+    <li><b>Modell:</b> jede Markierung ist eine gewöhnliche Form des Editors mit <code>data-hs-shape</code> (<code>point</code> = Kreis fester Größe,
+      <code>circle</code>, <code>rect</code>, <code>poly</code> = <code>&lt;polygon&gt;</code> bzw. <code>&lt;path&gt;</code> nach dem Knoten-Werkzeug),
+      <code>data-hs-id</code> und den Angaben <code>data-hs-title|text|link|link_label|term|icon</code>. Zeichnen, Auswahl, Griffe, Knoten, Tastatur,
+      Kopieren und Rückgängig sind die des Editors; <code>GraphicEditor</code> fragt an wenigen Stellen <code>ed.hs</code> (Werkzeuge, <code>create()</code>,
+      Stift ohne Kurven, keine Drehung, Kreise mit festem Seitenverhältnis, Nummern in der Überlagerung, <code>save()</code> → <code>apply()</code>).</li>
+    <li><b>Umrechnung:</b> <code>load(data)</code> setzt Prozent × Bildgröße ein, <code>data()</code> liest die Lage im Dokument (Rahmen bzw. Eckpunkte mit
+      <code>docMatrix</code>) und rechnet in Prozent zurück, gerundet auf zwei Nachkommastellen und bereinigt wie <code>Core\Hotspots::normalize</code>
+      (<code>normalize()</code>, höchstens 60 Markierungen und 64 Eckpunkte). Hin- und Rückweg sind verlustfrei: <code>init</code> → <code>apply</code> ohne
+      Änderung ergibt dieselben Daten. Radius = halbe Breite in % der Bildbreite, Nummer im Schwerpunkt wie <code>Hotspots::anchor</code>.</li>
+    <li><b>Reihenfolge</b> = Reihenfolge der Ebenen = Nummer; das Bild bleibt gesperrt ganz unten (<code>guard()</code>), Kennungen bleiben eindeutig.</li>
   </ul>
   <h3 id="grafik-editor-technik">Editor</h3>
   <p>Vektoreditor (Erweiterung „grafik“, Paket <code>klxm/studio-grafik</code>): Infografiken für die Mediathek, Symbole und Blockvorschauen in einer eigenen Ablage. Eine Komponente,

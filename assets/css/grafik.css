@@ -779,3 +779,31 @@ html.adm-ui[data-theme=dark] .gx-label { fill: #7DDBA6 }
 .ge-fill__foot { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--adm-line) }
 .ge-fill__status { color: var(--adm-t2); font-size: 13px }
 @media (max-width: 760px) { .ge-fill__grid { grid-template-columns: 1fr; overflow: auto } .ge-fill__form { border-right: 0; border-bottom: 1px solid var(--adm-line); overflow: visible } .ge-fill__stage { min-height: 260px } }
+
+/* ---------------------------------------------------------------- Modus „Markierungen“ (hotspots.js, Interaktives Bild des Cores) */
+.ge[data-format=hotspots] .ge-personas, .ge[data-format=hotspots] .ge-scheme, .ge[data-format=hotspots] .ge-bgbtn,
+.ge[data-format=hotspots] [data-act=objmenu], .ge[data-format=hotspots] [data-act=export], .ge[data-format=hotspots] .ge-fs,
+.ge[data-format=hotspots] .ge-tools__sep, .ge[data-format=hotspots] .ge-ctx { display: none }
+.ge[data-format=hotspots] .ge-side > .ge-pg:not(.ge-pg--hs) { display: none }
+.ge-pg--hs { flex: 1 0 auto; border-bottom: 0 }
+.ge-hs { padding: 12px; display: flex; flex-direction: column; gap: 10px }
+.ge-hs__h { margin: 0; font: 800 14px var(--adm-font); color: var(--adm-ink); display: flex; align-items: baseline; gap: 8px }
+.ge-hs__count { font-weight: 600; font-size: 12px; color: var(--adm-t2) }
+.ge-hs__hint { margin: 0; font-size: 13px; color: var(--adm-t2) }
+.ge-hs__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; max-height: 38vh; overflow-y: auto }
+.ge-hs__item { display: flex; align-items: center; gap: 2px; border-radius: 8px }
+.ge-hs__item.is-on { background: var(--adm-fill) }
+.ge-hs__pick { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 4px 8px; border: 0; border-radius: 8px; background: none; color: var(--adm-ink); font: 600 13px var(--adm-font); text-align: left; cursor: pointer }
+.ge-hs__pick:hover { background: var(--adm-fill) }
+.ge-hs__pick svg { flex: none; width: 16px; height: 16px; color: var(--adm-t2) }
+.ge-hs__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.ge-hs__num { flex: none; display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 4px; border-radius: 11px; background: #1D4ED8; color: #fff; font: 800 12px var(--adm-font) }
+.ge-hs__item .ge-ib:disabled { opacity: .35; cursor: default }
+.ge-hs__form { border-top: 1px solid var(--adm-line); padding-top: 10px; display: flex; flex-direction: column; gap: 4px }
+.ge-hs__form .f { margin: 0 0 8px }
+.ge-hs__fh { margin: 0 0 4px; font: 800 13px var(--adm-font); color: var(--adm-ink) }
+.ge-hs__actions { margin: 4px 0 0 }
+.ge-ov__hs circle { fill: #1D4ED8; stroke: #fff; stroke-width: 2 }
+.ge-ov__hs text { fill: #fff; font: 800 12px var(--adm-font, sans-serif); text-anchor: middle }
+.ge-ov__hs.is-on circle { fill: #C2410C }
+.ge-hs-error { display: grid; place-content: center; gap: 12px; min-height: 60vh; padding: 24px; text-align: center; font-size: 15px }

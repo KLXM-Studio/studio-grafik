@@ -1,5 +1,23 @@
 # Changelog – Grafik-Editor (`klxm/studio-grafik`)
 
+## 1.2.0 (2026-11-22)
+
+- Neu: **Markierungen für das interaktive Bild.** Im Feld „Markierungen“ des Core-Blocks „Interaktives Bild“ (und in Datentabellen mit
+  Markierungen) öffnet **Im Grafik-Editor öffnen** das gewählte Bild im Editor (Andockstelle `Extension::hotspotEditor` des Cores, Recht
+  „Dateien hochladen und bearbeiten“). Das Bild ist die gesperrte Grundlage; Werkzeuge **Punkt**, **Kreis**, **Rechteck** und **Fläche (Vieleck)** mit
+  den Mitteln des Editors (Ziehen, Griffe, Eckpunkte mit dem Knoten-Werkzeug, Pfeiltasten, Tab, Entf, Rückgängig). Die Seitenleiste zeigt alle
+  Markierungen in der Reihenfolge ihrer Nummer (umsortieren mit den Pfeilen) und für die gewählte **Titel**, **Text** (Rich-Text), **Link** (Linkauswahl
+  des Cores), **Glossar-Begriff** und **Symbol**. **Übernehmen** schreibt die Markierungen ins Formular (gespeichert wird mit dem Formular),
+  **Abbrechen** verwirft sie. Ohne Bild erscheint ein Hinweis.
+- Austausch mit dem Feld per `postMessage` (gleiche Herkunft, nur mit dem Fenster darüber): `ready` → `init` → `apply`/`close`, Format
+  `Core\Hotspots` Version 1 in Prozent; Hin- und Rückweg sind verlustfrei (`init` → `apply` ohne Änderung ergibt dieselben Daten).
+- Selbsttest `grafik:selftest`: Knopf nur mit Recht, Bild als gesperrte Grundlage in Bildgröße, Felder des Cores, Hinweis ohne Bild, Format stabil für
+  `Core\Hotspots::normalize`.
+
+English: new hotspot mode for the core “Interactive image” block – “Open in graphics editor” in the hotspots field draws points, circles,
+rectangles and polygons on the fixed image with the editor's tools; sidebar with order (= number), title, text, link picker, glossary term and
+icon; “Apply” writes the hotspots back to the form (lossless percent conversion), “Cancel” discards.
+
 ## 1.1.0 (2026-11-22)
 
 - Behoben: Beim Bearbeiten eines zentrierten oder rechtsbündigen Texts mit Textrahmen – vor allem bei Text in Formen („Start“ in einem

@@ -25,6 +25,8 @@ use Core\Svg;
  *    Arbeitsfassung erhalten (Core\Svg mit 'editor'), die Web-Fassung enthält nur das Rechteck; der Editor kennt die Angaben
  *  - Anbindung an den Core: Routen der Erweiterung mit Recht, Mediathek-Angaben (ext.grafik), Filter media.usages und
  *    presence.object, Blockauswahl „Vorschau gestalten“, Angaben für das Verwaltungs-Skript (adminData)
+ *  - Markierungen (Interaktives Bild): Knopf im Feld nur mit „Dateien hochladen“, Editor mit dem Bild als gesperrter Grundlage in
+ *    Bildgröße, Felder des Cores in der Seitenleiste, ohne Bild ein Hinweis; die Ausgabe des Editors ist für Core\Hotspots stabil
  * Datenbank-Änderungen laufen in einer Transaktion und werden zurückgerollt; angelegte Dateien werden gelöscht.
  */
 final class SelfTest
@@ -74,6 +76,7 @@ final class SelfTest
             self::collab($files);
             self::bild($files);
             self::core($files);
+            self::hotspots($files);
         } catch (\Throwable $e) {
             self::$fails[] = 'Ausnahme: ' . $e->getMessage();
         } finally {
@@ -177,6 +180,60 @@ final class SelfTest
             self::t(is_array($d) && str_contains((string) $d['js'], '/assets/ext/grafik/js/grafik.js') && str_ends_with((string) $d['boot'], '/admin/api/grafik/boot'), 'Angaben: Adressen von Editor und Boot');
         }
         self::t(in_array(Templates::RIGHT, \Core\Permissions::all(), true), 'Recht „Vorlagen gestalten“ kommt von der Erweiterung');
+    }
+
+    /**
+     * Markierungen (Interaktives Bild, Extension::hotspotEditor): Knopf nur mit „media.upload“, Editor mit Bild als gesperrter
+     * Grundlage (viewBox = Bildgröße wie Core\Hotspots::render), Felder des Cores, Hinweis ohne Bild. Das Format, das hotspots.js
+     * ausgibt (zwei Nachkommastellen, Grenzen eingehalten), bleibt bei Core\Hotspots::normalize unverändert – Hin- und Rückweg
+     * im Browser prüft der Playwright-Durchlauf (init → apply).
+     */
+    private static function hotspots(array &$files): void
+    {
+        $ed = array_values(array_filter(\Core\Extensions::hotspotEditors(), fn($x) => str_ends_with($x['url'], '/admin/grafik/editor')));
+        self::t(can('media.upload') ? (count($ed) === 1 && $ed[0]['icon'] === 'pen-nib' && $ed[0]['label'] !== '') : $ed === [], 'Interaktives Bild: „Im Grafik-Editor öffnen“ nur mit „Dateien hochladen“');
+        $a = app()->auth;
+        $saved = [];
+        foreach (['loaded', 'user', 'role'] as $prop) $saved[$prop] = (new \ReflectionProperty($a, $prop))->getValue($a);
+        try {
+            self::actAs(['pages.edit']);
+            self::t(!array_filter(\Core\Extensions::hotspotEditors(), fn($x) => str_contains($x['url'], '/admin/grafik/')), 'ohne „Dateien hochladen“ kein Knopf');
+            self::actAs(['media.upload', 'pages.edit']);
+            self::t(count(array_filter(\Core\Extensions::hotspotEditors(), fn($x) => str_contains($x['url'], '/admin/grafik/'))) === 1, 'Redaktion mit „Dateien hochladen“: Knopf');
+        } finally {
+            foreach ($saved as $prop => $v) (new \ReflectionProperty($a, $prop))->setValue($a, $v);
+        }
+
+        $im = imagecreatetruecolor(640, 400);
+        imagefilledrectangle($im, 0, 0, 640, 400, (int) imagecolorallocate($im, 230, 220, 200));
+        $p = (string) tempnam(sys_get_temp_dir(), 'hs');
+        imagepng($im, $p);
+        $files[] = $p;
+        [$m, $err] = Media::import($p, 'selbsttest-markierungen.png', 'Selbsttest: Grundriss');
+        self::t($m !== null, 'Bild für Markierungen angelegt' . ($err ? " ($err)" : ''));
+        if (!$m) return;
+        foreach (Media::fileList($m) as $f) $files[] = Media::dir() . '/' . $f;
+        $b = Hotspots::boot((int) $m['id']);
+        $svg = (string) ($b['doc']['svg'] ?? '');
+        self::t(($b['doc']['format'] ?? '') === 'hotspots' && ($b['doc']['target'] ?? '') === 'hotspots' && ($b['hs']['width'] ?? 0) === 640 && ($b['hs']['height'] ?? 0) === 400,
+            'Markierungen: Modus hotspots in Bildgröße');
+        self::t(str_contains($svg, 'viewBox="0 0 640 400"') && (bool) preg_match('~<image[^>]*data-hs-base="1"[^>]*data-locked="1"~', $svg), 'Bild als gesperrte Grundlage (viewBox wie auf der Website)');
+        $form = (string) ($b['hs']['form'] ?? '');
+        self::t(str_contains($form, 'name="hs[title]"') && str_contains($form, 'class="rte"') && str_contains($form, 'data-link-field') && str_contains($form, 'data-icon-picker'),
+            'Seitenleiste: Titel, Rich-Text, Linkauswahl und Symbolauswahl des Cores');
+        self::t(($b['hs']['max'] ?? 0) === \Core\Hotspots::MAX && ($b['hs']['maxPoints'] ?? 0) === \Core\Hotspots::MAX_POINTS, 'Grenzen aus Core\Hotspots (Anzahl, Eckpunkte)');
+        self::t(isset(Hotspots::boot(0)['error']) && isset(Hotspots::boot(999999993)['error']), 'ohne Bild: Hinweis statt Editor');
+        // Ausgabe des Editors (hotspots.js data()): bleibt bei der Bereinigung des Cores gleich
+        $out = ['v' => 1, 'items' => [
+            ['id' => 'h1', 'shape' => 'point', 'x' => 12.07, 'y' => 33.33, 'title' => 'Eins', 'text' => '<p>Text</p>', 'link' => 'https://example.org/x', 'link_label' => 'Mehr', 'term' => '', 'icon' => 'star'],
+            ['id' => 'h2', 'shape' => 'circle', 'x' => 50.0, 'y' => 50.55, 'r' => 7.77, 'title' => '', 'text' => '', 'link' => '', 'link_label' => '', 'term' => '', 'icon' => ''],
+            ['id' => 'h3', 'shape' => 'rect', 'x' => 0.0, 'y' => 80.01, 'w' => 19.99, 'h' => 19.99, 'title' => '', 'text' => '', 'link' => '', 'link_label' => '', 'term' => '', 'icon' => ''],
+            ['id' => 'h4', 'shape' => 'poly', 'points' => [[60.5, 10.25], [99.99, 12.3], [88.88, 40.4]], 'title' => 'Fläche', 'text' => '', 'link' => '', 'link_label' => '', 'term' => '', 'icon' => ''],
+        ]];
+        self::t(json_encode(\Core\Hotspots::normalize($out)) === json_encode(\Core\Hotspots::normalize(\Core\Hotspots::normalize($out))) && count(\Core\Hotspots::normalize($out)['items']) === 4,
+            'Format des Editors ist für Core\Hotspots stabil');
+        $js = (string) @file_get_contents(dirname(__DIR__) . '/public/js/grafik.js');
+        self::t($js === '' || (str_contains($js, 'klxm-hotspot-editor') && str_contains($js, 'data-hs-shape')), 'Gebauter Editor: Modus Markierungen (postMessage klxm-hotspot-editor)');
     }
 
     private static function library(): void

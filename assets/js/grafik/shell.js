@@ -94,6 +94,7 @@ export function mountPage() {
   const boot = JSON.parse(data.textContent);
   host.innerHTML = '';
   document.documentElement.classList.add('ge-full');
+  if (boot.doc?.format === 'hotspots') return mountHotspots(host, boot);
   // Eingebettet (Blockauswahl der Website → „Vorschau gestalten“): Nachrichten an das Fenster darüber, gleiche Herkunft
   const embed = new URLSearchParams(location.search).get('embed') === '1' && window.parent !== window;
   const tell = msg => { try { window.parent.postMessage({ source: 'klxm-preview-editor', ...msg }, location.origin); } catch { /* ohne Eltern */ } };
@@ -129,4 +130,40 @@ export function mountPage() {
   } else window.addEventListener('beforeunload', e => { if (ed.dirty) { e.preventDefault(); e.returnValue = ''; } });
   ed.stage.focus({ preventScroll: true });
   window.CMSGraphicEditor.current = ed;
+}
+
+/**
+ * Modus „Markierungen“ (Interaktives Bild des Cores, Extension::hotspotEditor): eingebettet im Feld „Markierungen“.
+ * postMessage nur mit dem Fenster darüber und gleicher Herkunft:
+ *   → {source: 'klxm-hotspot-editor', type: 'ready'}   ← {source: 'klxm-hotspots', type: 'init', v: 1, data, media}
+ *   → {…, type: 'apply', data: {v: 1, items}, close: true}   → {…, type: 'close'}
+ */
+function mountHotspots(host, boot) {
+  const embed = window.parent !== window;
+  const tell = msg => { if (embed) window.parent.postMessage({ source: 'klxm-hotspot-editor', ...msg }, location.origin); };
+  if (boot.error) {
+    host.innerHTML = `<div class="ge-hs-error"><p>${esc(boot.error)}</p><button type="button" class="adm-btn adm-btn--small" data-close>${esc(t('Schließen'))}</button></div>`;
+    host.querySelector('[data-close]').addEventListener('click', () => tell({ type: 'close' }));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') tell({ type: 'close' }); });
+    host.querySelector('[data-close]').focus();
+    return;
+  }
+  const ed = new GraphicEditor(host, boot, { onApply: data => tell({ type: 'apply', v: 1, data, close: true }) });
+  window.CMSGraphicEditor.page = window.CMSGraphicEditor.current = ed;
+  const slot = ed.el.querySelector('[data-shellbtns]');
+  slot.innerHTML = `<button type="button" class="adm-btn adm-btn--small adm-btn--ghost" data-cancel>${ico('x')} ${esc(t('Abbrechen'))}</button>`;
+  const cancel = async () => {
+    if (ed.dirty && !(await modal(ed.el, { title: t('Änderungen an den Markierungen verwerfen?'), ok: t('Verwerfen'), body: `<p>${esc(t('Die Markierungen wurden noch nicht übernommen.'))}</p>` }))) return;
+    if (embed) tell({ type: 'close' }); else location.href = boot.urls.media;
+  };
+  slot.querySelector('[data-cancel]').addEventListener('click', cancel);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !e.defaultPrevented && !ed.sel.length && !ed.pen && !document.querySelector('dialog[open]')) cancel(); });
+  // Daten vom Feld: einmal beim Start (init); fremde Fenster und Herkünfte zählen nicht
+  addEventListener('message', ev => {
+    if (ev.origin !== location.origin || ev.source !== window.parent || ev.data?.source !== 'klxm-hotspots' || ev.data.type !== 'init') return;
+    ed.hs.load(ev.data.data);
+    ed.stage.focus({ preventScroll: true });
+  });
+  tell({ type: 'ready' });
+  ed.stage.focus({ preventScroll: true });
 }

@@ -18,7 +18,8 @@ php bin/console extensions:publish         # gebaute Dateien nach public/assets/
 ```
 
 Einschalten je Website unter **Administration → Funktionen & Erweiterungen** oder `'extensions' => ['grafik']` in
-`config/sites/{key}.php`. Benötigt KLXM Studio ≥ 1.0.0 (Integrationspunkte `adminData`, `previewEditor`, Mediathek-Haken
+`config/sites/{key}.php`. Benötigt KLXM Studio ≥ 1.0.0 (Integrationspunkte `adminData`, `previewEditor`, `hotspotEditor` für den Modus
+„Markierungen“, Mediathek-Haken
 `create`/`edit`/`side`, Filter `media.usages` und `presence.object`). Eigene Tabellen oder Migrationen hat das Paket nicht – die Daten liegen
 in den Tabellen des Cores.
 
@@ -31,6 +32,7 @@ in den Tabellen des Cores.
 | Text und Diagramme | Text direkt auf der Fläche bearbeiten (auch zentriert, in Formen, gedreht, bei jedem Zoom), Textrahmen mit Umbruch, **Hintergrund für Texte** (Farbe, Deckkraft, Innenabstand, Eckenradius, Rahmen), Verbinder zwischen Formen und **Beschriftung von Verbindern** (Doppelklick auf die Linie oder ↵, entlang der Linie verschiebbar). |
 | Grafik-Ablage | `/admin/grafik`: Symbole, Blockvorschauen, eigene Bausteine, Vorlagen zum Ausfüllen – nicht in der Mediathek. |
 | Blockauswahl | „Vorschau gestalten“: Skizze eines Blocks für diese Website zeichnen (Recht „Design“). |
+| Interaktives Bild | „Im Grafik-Editor öffnen“ im Feld „Markierungen“ des Blocks „Interaktives Bild“: Punkte, Kreise, Rechtecke und Flächen auf das feste Bild zeichnen, je Markierung Titel, Text, Link, Glossar-Begriff und Symbol; „Übernehmen“ schreibt sie ins Formular. |
 | Zusammenarbeit | Fassungen, Vergleich, „Verwendet auf“, wer arbeitet gerade an der Grafik. |
 
 ## Bildschirmfotos
@@ -93,7 +95,8 @@ Aufgenommen auf der Demo-Website „Studio Beispiel“ (selbst gezeichnete Forme
 Optional graphics editor extension for KLXM Studio: infographics with design colours (light/dark), motion and data, icons,
 block previews, own parts, photo-with-text images, social formats and fill-in templates. Text is edited directly on the canvas;
 texts can have a background (colour, opacity, padding, radius, border); connectors can be labelled (double-click the line or press ↵,
-drag the label along the line). Install with `composer require klxm/studio-grafik`, then `php bin/console extensions:publish`.
+drag the label along the line). Hotspot mode for the core “Interactive image” block: draw points, circles, rectangles and polygons on the
+fixed image, edit title, text, link, glossary term and icon, then apply them to the form. Install with `composer require klxm/studio-grafik`, then `php bin/console extensions:publish`.
 
 ## Lizenz
 

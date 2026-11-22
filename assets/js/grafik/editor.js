@@ -51,6 +51,7 @@ import { isBoundText } from './bind.js';
 import { Photos, toWork, isRasterDoc } from './photo.js';
 import { BildPersona } from './bild.js';
 import { studioHost } from './host.js';
+import { HotspotMode, isMarker } from './hotspots.js';
 
 /** Größe lesbar (Byte → KB) */
 const kb = n => n < 1024 ? n + ' B' : (n / 1024).toLocaleString(undefined, { maximumFractionDigits: n < 10240 ? 1 : 0 }) + ' KB';
@@ -79,7 +80,20 @@ const TOOLS = [
   { id: 'eyedropper', icon: 'eyedropper', key: 'I', label: () => t('Pipette') },
   { id: 'hand', icon: 'hand', key: 'H', label: () => t('Hand') },
   { id: 'zoom', icon: 'magnifying-glass-plus', key: 'Z', label: () => t('Zoom') },
+  // nur im Modus „Markierungen“ (hotspots.js)
+  { id: 'point', icon: 'map-pin', key: 'K', label: () => t('Punkt'), hs: true },
 ];
+
+/** Werkzeuge im Modus „Markierungen“ (Interaktives Bild): Reihenfolge und Namen */
+const HS_TOOLS = { select: null, node: () => t('Eckpunkte'), point: null, ellipse: () => t('Kreis'), rect: null, pen: () => t('Fläche (Vieleck)'), hand: null, zoom: null };
+const HS_HINTS = {
+  select: () => t('Klick = Markierung auswählen, Ziehen = verschieben, Griffe = Größe. Pfeiltasten verschieben, ⌫ löscht. Das Bild bleibt fest.'),
+  node: () => t('Klick auf eine Fläche zeigt ihre Eckpunkte. Eckpunkte ziehen, Klick auf eine Kante fügt einen ein, ⌫ löscht ihn.'),
+  point: () => t('Klick = Punkt mit Nummer setzen, gedrückt halten und ziehen = gleich verschieben.'),
+  ellipse: () => t('Ziehen = Kreis, ⌥ = von der Mitte aus.'),
+  rect: () => t('Ziehen = Rechteck, ⇧ = Quadrat, ⌥ = von der Mitte aus.'),
+  pen: () => t('Klick = Eckpunkt. Klick auf den ersten Punkt, ↵ oder Esc schließt die Fläche (mindestens drei Eckpunkte).'),
+};
 
 const HINTS = {
   select: () => t('Klick = Objekt auswählen, Ziehen = verschieben bzw. Auswahlrahmen. ⇧ = hinzufügen, ⌥ beim Ziehen = Kopie. Doppelklick = in Gruppe bzw. Text bearbeiten.'),
@@ -109,6 +123,8 @@ export class GraphicEditor {
     this.uid = 'ge' + (++seq);
     this.doc = { ...boot.doc };
     this.format = this.doc.format || 'info';
+    // Modus „Markierungen“ (Interaktives Bild des Cores): Bild als Grundlage, Formen = Markierungen (hotspots.js)
+    this.hs = this.format === 'hotspots' ? new HotspotMode(this) : null;
     this.tool = 'select';
     this.sel = [];
     this.scope = null;          // betretene Gruppe (Doppelklick), sonst Wurzel
@@ -157,6 +173,13 @@ export class GraphicEditor {
     // Fassungen vergleichen, „Verwendet auf“, wer bearbeitet gerade (collab.js)
     this.collab = new Collab(this);
     this.load(this.doc.svg || '', t('Geöffnet'));
+    if (this.hs) this.hs.mountSide(this.$('.ge-side'));
+  }
+
+  /** Werkzeuge der Leiste (im Modus „Markierungen“ nur die passenden, mit eigenen Namen) */
+  toolList() {
+    if (!this.hs) return TOOLS.filter(x => !x.hs);
+    return Object.entries(HS_TOOLS).map(([id, lb]) => { const x = TOOLS.find(y => y.id === id); return lb ? { ...x, label: lb } : x; });
   }
 
   // ================================================================= Ereignisse für Einbettungen (Motion, Erweiterungen)
@@ -172,7 +195,7 @@ export class GraphicEditor {
 
   // ================================================================= Aufbau
   build() {
-    const fmtLabel = (this.boot.formatLabels || {})[this.doc.kind === 'part' ? 'part' : this.format] || '';
+    const fmtLabel = this.format === 'hotspots' ? t('Markierungen') : (this.boot.formatLabels || {})[this.doc.kind === 'part' ? 'part' : this.format] || '';
     this.el = h(`<div class="ge" data-format="${esc(this.format)}" data-tool="select">
       <header class="ge-top">
         <div class="ge-personas" role="radiogroup" aria-label="${esc(t('Persona'))}"></div>
@@ -185,7 +208,7 @@ export class GraphicEditor {
         <button type="button" class="ge-zoombtn" data-act="zoommenu" aria-haspopup="menu" aria-expanded="false" title="${esc(t('Zoom'))}"><span data-zoom>100 %</span>${ico('caret-down')}</button>
         <button type="button" class="adm-btn adm-btn--small" data-act="export" aria-haspopup="menu" aria-expanded="false">${ico('export')} ${esc(t('Exportieren'))}</button>
         <span data-shellbtns></span>
-        <button type="button" class="adm-btn adm-btn--primary adm-btn--small" data-act="save" aria-keyshortcuts="${isMac ? 'Meta+S' : 'Control+S'}">${ico('floppy-disk')} ${esc(t('Speichern'))}</button>
+        <button type="button" class="adm-btn adm-btn--primary adm-btn--small" data-act="save" aria-keyshortcuts="${isMac ? 'Meta+S' : 'Control+S'}">${this.format === 'hotspots' ? ico('check') + ' ' + esc(t('Übernehmen')) : ico('floppy-disk') + ' ' + esc(t('Speichern'))}</button>
       </header>
       <div class="ge-ctx" role="toolbar" aria-label="${esc(t('Kontextleiste'))}"></div>
       <div class="ge-tools" role="toolbar" aria-orientation="vertical" aria-label="${esc(t('Werkzeuge'))}"></div>
@@ -258,7 +281,7 @@ export class GraphicEditor {
 
   renderTools() {
     const nav = this.$('.ge-tools');
-    nav.innerHTML = TOOLS.map(tl => `<button type="button" class="ge-tool" data-tool="${tl.id}" aria-pressed="${tl.id === this.tool}" aria-label="${esc(tl.label())}" title="${esc(tl.label())} (${tl.key})" aria-keyshortcuts="${tl.key}">${ico(tl.icon)}</button>`).join('')
+    nav.innerHTML = this.toolList().map(tl => `<button type="button" class="ge-tool" data-tool="${tl.id}" aria-pressed="${tl.id === this.tool}" aria-label="${esc(tl.label())}" title="${esc(tl.label())} (${tl.key})" aria-keyshortcuts="${tl.key}">${ico(tl.icon)}</button>`).join('')
       + `<div class="ge-tools__sep"></div>
       <div class="ge-fs" role="group" aria-label="${esc(t('Füllung und Kontur'))}">
         <button type="button" class="ge-fs__stroke" data-fs="stroke" aria-label="${esc(t('Kontur bearbeiten'))}" title="${esc(t('Kontur'))}"></button>
@@ -295,7 +318,7 @@ export class GraphicEditor {
   }
 
   setTool(id) {
-    if (!TOOLS.some(x => x.id === id)) return;
+    if (!this.toolList().some(x => x.id === id)) return;
     this.warp?.commit();
     this.finishPen();
     this.endText();
@@ -320,7 +343,7 @@ export class GraphicEditor {
     this.selHinted = !!c;
   }
 
-  hint(text) { this.$('.ge-status__hint').textContent = text || HINTS[this.tool]?.() || ''; }
+  hint(text) { this.$('.ge-status__hint').textContent = text || (this.hs && HS_HINTS[this.tool]?.()) || HINTS[this.tool]?.() || ''; }
 
   // ================================================================= Dokument laden / ausgeben
   load(svg, label) {
@@ -583,6 +606,8 @@ export class GraphicEditor {
     }
     if (this.pen) out.push(this.drawPen());
     if (this.textEd) out.push(this.textEd.draw());
+    // Markierungen: Nummern wie auf der Website
+    if (this.hs) out.push(this.hs.overlay());
     // Überlagerung der aktiven Persona (z. B. Bereiche in Export)
     const per = this.personas.find(p => p.id === this.persona);
     if (per?.overlay) out.push(per.overlay());
@@ -636,6 +661,8 @@ export class GraphicEditor {
       if (cc) s += `<polygon class="ge-ov__sub" points="${cc.map(p => { const q = this.toOv(p); return q.x + ',' + q.y; }).join(' ')}"/>`;
     }
     if (this.sel.some(isLocked)) return s;
+    // Markierungen: Punkte haben keine Größe
+    if (this.hs?.fixedSize(this.sel)) return s;
     const H = { nw: [0, 0], n: [.5, 0], ne: [1, 0], e: [1, .5], se: [1, 1], s: [.5, 1], sw: [0, 1], w: [0, .5] };
     const small = Math.abs(c[1].x - c[0].x) + Math.abs(c[1].y - c[0].y) < 24;
     for (const [k, [u, v]] of Object.entries(H)) {
@@ -643,7 +670,8 @@ export class GraphicEditor {
       const p = P(b.x + b.w * u, b.y + b.h * v);
       s += `<rect class="ge-ov__h" data-h="${k}" x="${p.x - 5}" y="${p.y - 5}" width="10" height="10" rx="2"/>`;
     }
-    // Drehgriff oberhalb der Mitte
+    // Drehgriff oberhalb der Mitte (nicht bei Markierungen – Core\Hotspots kennt keine Drehung)
+    if (this.hs) return s;
     const top = P(b.x + b.w / 2, b.y), ctr = P(b.x + b.w / 2, b.y + b.h / 2);
     const len = Math.hypot(top.x - ctr.x, top.y - ctr.y) || 1, rx = top.x + (top.x - ctr.x) / len * 26, ry = top.y + (top.y - ctr.y) / len * 26;
     s += `<line class="ge-ov__rotline" x1="${top.x}" y1="${top.y}" x2="${rx}" y2="${ry}"/><circle class="ge-ov__h ge-ov__rot" data-h="rot" cx="${rx}" cy="${ry}" r="6"/>`;
@@ -724,7 +752,10 @@ export class GraphicEditor {
     }
     this.stage.focus({ preventScroll: true });
     const p = this.toDoc(e.clientX, e.clientY);
+    // Markierungen: Höchstzahl vor dem Zeichnen prüfen
+    if (this.hs && (['point', 'rect', 'ellipse'].includes(this.tool) || this.tool === 'pen' && !this.pen) && this.hs.full()) return;
     switch (this.tool) {
+      case 'point': return this.hs?.pointDown(e, p);
       case 'select': return this.selectDown(e, p);
       case 'node': return this.nodeStageDown(e, p);
       case 'pen': return this.penDown(e, p);
@@ -838,7 +869,7 @@ export class GraphicEditor {
     }
     const u = k.includes('w') ? 0 : k.includes('e') ? 1 : .5, v = k.includes('n') ? 0 : k.includes('s') ? 1 : .5;
     const hx = b.x + b.w * u, hy = b.y + b.h * v;
-    const lock = this.panels.aspectLocked();
+    const lock = this.panels.aspectLocked() || !!this.hs?.keepRatio(this.sel);
     this.track(e, (p, ev) => {
       const q = pt(Fi, p.x, p.y);
       const ax = ev.altKey ? b.x + b.w / 2 : b.x + b.w * (1 - u), ay = ev.altKey ? b.y + b.h / 2 : b.y + b.h * (1 - v);
@@ -891,6 +922,12 @@ export class GraphicEditor {
     if (this.tool !== 'select') return;
     const hit = this.hitAt(e);
     if (!hit) return;
+    // Markierungen: Doppelklick auf eine Fläche = Eckpunkte, sonst zu den Angaben (Titel)
+    if (this.hs && isMarker(hit.el)) {
+      this.select([hit.el]);
+      if (this.hs.isPoly(hit.el)) this.setTool('node'); else this.hs.form.querySelector('input,select,[contenteditable]')?.focus();
+      return;
+    }
     if (isCompound(hit.el)) { this.editCompound(hit.el); return; }
     // Baustein mit Text in der Form (Flussdiagramm, Organigramm): Doppelklick bearbeitet gleich den Text
     if (hit.el.localName === 'g') {
@@ -968,6 +1005,13 @@ export class GraphicEditor {
   create(tag, attrs, paint = true) {
     const el = document.createElementNS(NS, tag);
     for (const [k, v] of Object.entries(attrs)) if (v !== null && v !== undefined) el.setAttribute(k, v);
+    if (this.hs) {
+      // Markierungen: Form → Kreis/Rechteck/Fläche mit eigener Darstellung, immer auf der obersten Ebene (nicht im Bild)
+      this.hs.decorate(el, { ellipse: 'circle', circle: 'circle', rect: 'rect' }[tag] || 'poly');
+      el.removeAttribute('data-open');
+      this.root.append(el);
+      return el;
+    }
     if (paint) {
       const s = this.style;
       if (s.fill !== undefined && tag !== 'line' && tag !== 'polyline') el.setAttribute('fill', s.fill);
@@ -990,7 +1034,7 @@ export class GraphicEditor {
       p = this.snapPoint(p, p0, tool === 'line' && ev.shiftKey);
       let x0 = p0.x, y0 = p0.y, w = p.x - p0.x, hh = p.y - p0.y;
       if (tool !== 'line') {
-        if (ev.shiftKey) { const s = Math.max(Math.abs(w), Math.abs(hh)); w = Math.sign(w || 1) * s; hh = Math.sign(hh || 1) * s; }
+        if (ev.shiftKey || (this.hs && tool === 'ellipse')) { const s = Math.max(Math.abs(w), Math.abs(hh)); w = Math.sign(w || 1) * s; hh = Math.sign(hh || 1) * s; }
         if (ev.altKey) { x0 -= w; y0 -= hh; w *= 2; hh *= 2; }
       }
       const a = this.local({ x: Math.min(x0, x0 + w), y: Math.min(y0, y0 + hh) }), b = this.local({ x: Math.max(x0, x0 + w), y: Math.max(y0, y0 + hh) });
@@ -1015,7 +1059,7 @@ export class GraphicEditor {
       if (!el) return;
       if (tool === 'line') this.applyArrows(el);
       this.sel = [el];
-      this.commit({ rect: t('Rechteck'), ellipse: t('Ellipse'), polygon: t('Vieleck'), line: t('Linie') }[tool]);
+      this.commit(this.hs ? { rect: t('Rechteck'), ellipse: t('Kreis') }[tool] || t('Markierung') : { rect: t('Rechteck'), ellipse: t('Ellipse'), polygon: t('Vieleck'), line: t('Linie') }[tool]);
     });
   }
 
@@ -1056,7 +1100,8 @@ export class GraphicEditor {
     const node = { x: p.x, y: p.y, i: null, o: null };
     pen.nodes.push(node);
     this.track(e, (q) => {
-      if (Math.hypot(q.x - node.x, q.y - node.y) * this.zoom < 3) { node.i = node.o = null; }
+      // Markierungen: Flächen nur mit geraden Kanten (Core\Hotspots: Eckpunkte)
+      if (this.hs || Math.hypot(q.x - node.x, q.y - node.y) * this.zoom < 3) { node.i = node.o = null; }
       else { node.o = { x: q.x, y: q.y }; node.i = { x: 2 * node.x - q.x, y: 2 * node.y - q.y }; }
       pen.cursor = q; this.draw();
     }, () => this.draw());
@@ -1087,6 +1132,14 @@ export class GraphicEditor {
     const pen = this.pen;
     if (!pen) return;
     this.pen = null;
+    if (this.hs) {
+      // Fläche schließen: mindestens drei Eckpunkte, höchstens maxPoints
+      if (pen.nodes.length < 3) { if (pen.nodes.length) toast(t('Eine Fläche braucht mindestens drei Eckpunkte.'), 'warn'); this.draw(); return; }
+      const el = this.create('polygon', { points: pen.nodes.slice(0, this.hs.maxPoints).map(n => num(n.x, 2) + ',' + num(n.y, 2)).join(' ') });
+      this.sel = [el];
+      this.commit(t('Fläche gezeichnet'));
+      return;
+    }
     if (pen.nodes.length < 2) { this.draw(); return; }
     const nodes = pen.nodes.map(n => { const q = this.local(n); return { x: q.x, y: q.y, i: n.i && this.local(n.i), o: n.o && this.local(n.o) }; });
     const d = pathToString(fromNodes([{ closed: !!pen.closed, nodes }]));
@@ -1380,7 +1433,7 @@ export class GraphicEditor {
   nodeStageDown(e, p) {
     // Klick auf ein Segment der gewählten Kurve: Knoten einfügen (Form bleibt exakt) und gleich ziehbar
     const cur = this.sel[0];
-    if (cur && !isLocked(cur) && NODE_SHAPES.includes(cur.localName) && !e.shiftKey) {
+    if (cur && !isLocked(cur) && NODE_SHAPES.includes(cur.localName) && !e.shiftKey && (!this.hs || this.hs.isPoly(cur))) {
       const nm = this.nodeModel();
       const near = nm && nearestSeg(nm.subs, p, nm.M);
       if (near && near.d * this.zoom <= 5) {
@@ -1394,7 +1447,7 @@ export class GraphicEditor {
     }
     const hit = this.hitAt(e);
     const raw = hit?.raw;
-    if (raw && NODE_SHAPES.includes(raw.localName) && !isLocked(hit.el)) {
+    if (raw && NODE_SHAPES.includes(raw.localName) && !isLocked(hit.el) && (!this.hs || this.hs.isPoly(raw))) {
       if (this.sel[0] !== raw) { this.sel = [raw]; this.selMark = [this.pathOf(raw)]; this.nodeSel.clear(); this.changed(false); }
       return;
     }
@@ -2451,7 +2504,7 @@ export class GraphicEditor {
 
   /** Tab in der Zeichenfläche: nächstes Objekt auswählen (Tastaturbedienung) */
   cycle(d) {
-    const list = drawnChildren(this.scope).filter(el => !isHidden(el));
+    const list = drawnChildren(this.scope).filter(el => !isHidden(el) && !(this.hs && isLocked(el)));
     if (!list.length) return;
     const i = list.indexOf(this.sel[0]);
     const n = list[(i + d + list.length) % list.length] || list[0];
@@ -2589,7 +2642,7 @@ export class GraphicEditor {
       if (e.shiftKey && k === 'x') { e.preventDefault(); this.swapFs(); return; }
       if (k === 'x' && !e.shiftKey) { this.style.target = this.style.target === 'fill' ? 'stroke' : 'fill'; this.paintFs(); this.panels.showColor(); return; }
       if (e.key === '?') { e.preventDefault(); this.shortcuts(); return; }
-      const tl = TOOLS.find(x => x.key.toLowerCase() === k);
+      const tl = this.toolList().find(x => x.key.toLowerCase() === k);
       if (tl && !e.altKey) { e.preventDefault(); this.setTool(tl.id); }
     };
     this.keyUp = e => { if (e.key === ' ') { this.space = false; this.el.classList.remove('is-space'); } };
@@ -3183,6 +3236,8 @@ export class GraphicEditor {
   }
 
   async save(asNew = false) {
+    // Markierungen: nichts speichern – Daten an das Feld des Cores (shell.js)
+    if (this.hs) return this.hs.apply();
     this.finishPen(); this.endText();
     // Hat jemand anderes die Grafik inzwischen gespeichert? (Präsenz, wie bei Seiten)
     if (!asNew && this.collab && !(await this.collab.confirmSave())) return null;
