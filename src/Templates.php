@@ -204,4 +204,21 @@ final class Templates
     {
         return array_values(array_map(fn($s) => (string) $s['token'], Graphics::swatches()));
     }
+
+    /** Beispiel-Vorlagen des Pakets (examples/*.svg): Name => Datei */
+    public const EXAMPLES = ['Veranstaltung ankündigen' => 'veranstaltung.svg', 'Zitat' => 'zitat.svg'];
+
+    /** Fehlende Beispiel-Vorlagen anlegen (Ordner „Beispiele“; im Netzwerk für alle Websites) – Ausgabe für die Konsole */
+    public static function examples(): int
+    {
+        $scope = \Core\Sites::multi() ? 'network' : 'site';
+        $have = array_column(self::all(), 'name');
+        foreach (self::EXAMPLES as $name => $file) {
+            if (in_array($name, $have, true)) { echo "  vorhanden: $name\n"; continue; }
+            $svg = (string) file_get_contents(dirname(__DIR__) . '/examples/' . $file);
+            $t = self::store($scope, $name, $svg, null, 'Beispiele');
+            echo '  angelegt: ' . $name . ' (' . $t['ref'] . ', ' . count($t['fields']) . " Felder)\n";
+        }
+        return 0;
+    }
 }

@@ -88,6 +88,7 @@ Aufgenommen auf der Demo-Website „Studio Beispiel“ (selbst gezeichnete Forme
   (mit einchecken). Die Abhängigkeiten stehen in `package.json`; Kern-Helfer kommen über `klxm-studio/_i18n.js` usw. ins Bündel.
 - Übersetzungen: `lang/en.php` – `php bin/console i18n:missing en --extension=grafik` muss 0 melden.
 - Selbsttest: `php bin/console grafik:selftest --site=key` (Editor); die Anzeige prüft der Core mit `graphics:selftest`.
+- Beispiel-Vorlagen: `php bin/console grafik:beispiele --site=key` legt „Veranstaltung ankündigen“ und „Zitat“ an (fehlende, Ordner „Beispiele“).
 - Doku: Handbuch → „Grafiken zeichnen und bearbeiten“, Entwicklerhandbuch → „Grafik-Editor (Erweiterung)“ (`docs/`).
 
 ## English

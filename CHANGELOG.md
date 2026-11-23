@@ -1,5 +1,11 @@
 # Changelog – Grafik-Editor (`klxm/studio-grafik`)
 
+## 1.3.0 (2026-11-23)
+
+- Neu: **Beispiel-Vorlagen** „Veranstaltung ankündigen“ (1200 × 630, Foto, Akzentfarbe, Datum, Titel, Hinweis ein/aus) und „Zitat“
+  (1080 × 1080, Hintergrundfarbe, Zitat, Name, Funktion, Anführungszeichen ein/aus) – `php bin/console grafik:beispiele` legt
+  fehlende im Ordner „Beispiele“ an (im Netzwerk für alle Websites). Dateien: `examples/*.svg`.
+
 ## 1.2.0 (2026-11-22)
 
 - Neu: **Markierungen für das interaktive Bild.** Im Feld „Markierungen“ des Core-Blocks „Interaktives Bild“ (und in Datentabellen mit

@@ -31,7 +31,7 @@ use Klxm\Grafik\Templates;
 return [
     'name' => 'grafik',
     'label' => 'Grafik-Editor – Infografiken, Symbole, Bilder mit Foto und Text',
-    'version' => '1.2.0',
+    'version' => '1.3.0',
     'requires' => '>=1.0.0',
     'description' => 'Grafiken direkt in der Verwaltung zeichnen und bearbeiten: Infografiken mit Design-Farben, Bewegung und Daten, Symbole, Blockvorschauen, eigene Bausteine, Bilder mit Foto und Text, Formate für soziale Netzwerke und Vorlagen zum Ausfüllen.',
     'author' => 'KLXM Crossmedia GmbH and contributors',
@@ -39,7 +39,7 @@ return [
     'homepage' => 'https://studio.klxm.de',
     'provides' => ['Mediathek: Menü „Neu“ (Infografik, Bild mit Foto und Text, Aus Vorlage, Symbol, Blockvorschau), „Im Grafik-Editor bearbeiten“, Link „Grafik-Ablage“',
         'Seiten /admin/grafik (Grafik-Ablage) und /admin/grafik/editor', 'Blockauswahl: „Vorschau gestalten“', 'Interaktives Bild: „Im Grafik-Editor öffnen“ (Markierungen zeichnen)', 'Recht „Vorlagen für Bilder gestalten“', 'Befehl grafik:selftest'],
-    'commands' => ['grafik:selftest'],
+    'commands' => ['grafik:selftest', 'grafik:beispiele'],
     'usage' => function (): ?string {
         try {
             $n = (int) app()->db->fetchValue("SELECT COUNT(*) FROM graphics WHERE kind IN ('icon', 'preview', 'part', 'photo', 'template')");
@@ -118,6 +118,9 @@ return [
         $x->docs('manual', ['grafik' => ['id' => 'grafik-editor', 'title' => 'Grafiken zeichnen und bearbeiten (Grafik-Editor)', 'after' => 'medien', 'file' => __DIR__ . '/docs/manual.php']]);
         $x->docs('technical', ['grafik' => ['title' => 'Grafik-Editor (Erweiterung)', 'part' => 2, 'after' => 'medien', 'file' => __DIR__ . '/docs/technical.php']]);
 
+        // Zwei Beispiel-Vorlagen (examples/*.svg) anlegen, falls es sie noch nicht gibt – im Netzwerk für alle Websites
+        $x->command('grafik:beispiele', 'Grafik-Editor: Beispiel-Vorlagen „Veranstaltung ankündigen“ und „Zitat“ anlegen (fehlende)',
+            fn(array $args): int => Klxm\Grafik\Templates::examples());
         $x->command('grafik:selftest', 'Grafik-Editor: Ablage, Speichern, Rechte, Bausteine, Persona Bild, Vorlagen, Anbindung an den Core',
             fn(array $args): int => Klxm\Grafik\SelfTest::cli());
     },
