@@ -36,6 +36,7 @@ final class Controller extends AdminController
             // Vorlagen zum Ausfüllen (Persona Bild) – nur mit „graphics.templates“
             'templates' => Templates::can() ? Templates::all(true) : null,   // mit SVG: Vorschau auf der Karte
             'blocks' => Graphics::canKind('preview') ? Graphics::blockTypes() : [],
+            'jobs' => Jobs::all('waiting'),   // Grafik-Aufträge von KI-Agenten (MCP), die noch auf die Bilder warten
         ]);
     }
 
@@ -476,6 +477,22 @@ final class Controller extends AdminController
         if (!$res['outputs']) return Response::fail(implode(' ', $res['errors']) ?: __('Speichern fehlgeschlagen.'));
         $this->changed();
         return Response::json(['ok' => true, 'id' => $res['id'], 'outputs' => $res['outputs'], 'errors' => $res['errors'], 'versions' => Graphics::versions('graphic:' . $res['id'])]);
+    }
+
+    /** Grafik-Auftrag (MCP) für das Ausfüllen im Browser: GET ?id= → {job} */
+    public function job(Request $r): Response
+    {
+        $this->auth($r, 'media.upload');
+        $j = Jobs::find((string) ($r->query['id'] ?? ''));
+        return $j ? Response::json(['ok' => true, 'job' => Jobs::view($j)]) : Response::fail(__('Auftrag nicht gefunden.'), 404);
+    }
+
+    /** Auftrag erledigt (nach dem Speichern der Bilder): POST {id, graphic, outputs} */
+    public function jobDone(Request $r): Response
+    {
+        $this->auth($r, 'media.upload');
+        $j = Jobs::done((string) ($r->post['id'] ?? ''), (int) ($r->post['graphic'] ?? 0), is_array($r->post['outputs'] ?? null) ? $r->post['outputs'] : []);
+        return $j ? Response::json(['ok' => true, 'job' => Jobs::view($j)]) : Response::fail(__('Auftrag nicht gefunden.'), 404);
     }
 
     /** Vorlagen zum Ausfüllen (diese Website und alle Websites): GET → {templates: [...] mit SVG} */

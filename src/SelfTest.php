@@ -64,6 +64,7 @@ final class SelfTest
         self::bildClean();
         self::prefs();
         self::texts();
+        self::jobs();
         $db = app()->db;
         $db->pdo->beginTransaction();
         $files = [];
@@ -463,6 +464,20 @@ final class SelfTest
         $v = Templates::validate($col, ['c' => '#ff0000', 'i' => 999999], ['accent']);
         self::t(count($v['errors']) === 2 && !isset($v['vals']['c']) && !isset($v['vals']['i']), 'Farbe nur aus Design-Farben, Bild nur aus der Mediathek');
         self::t(Templates::validate($col, ['c' => 'accent'], ['accent'])['vals'] === ['c' => 'accent'], 'Design-Farbe angenommen');
+    }
+
+    /** Grafik-Aufträge (MCP): Werkzeuge angemeldet, Zuordnung aus einem Eintrag, Ansicht mit Link */
+    private static function jobs(): void
+    {
+        $names = array_column(\Core\Extensions::mcpTools(), 'name');
+        self::t(!method_exists(\Core\Extension::class, 'mcpTool') || (in_array('create_graphic', $names, true) && in_array('list_graphic_templates', $names, true) && in_array('get_graphic_job', $names, true)), 'MCP-Werkzeuge angemeldet');
+        $fields = [['k' => 'titel', 'n' => 'Titel', 't' => 'text', 'max' => 10], ['k' => 'wann', 'n' => 'Datum', 't' => 'text', 'max' => 40], ['k' => 'foto', 'n' => 'Foto', 't' => 'image'], ['k' => 'farbe', 'n' => 'Farbe', 't' => 'color']];
+        $t = ['handle' => 'x', 'name' => 'X', 'fields' => [['name' => 'titel', 'type' => 'text', 'label' => 'Titel'], ['name' => 'tag', 'type' => 'date', 'label' => 'Tag'], ['name' => 'bild', 'type' => 'media', 'label' => 'Bild']],
+            'settings' => ['title_field' => 'titel', 'image_field' => 'bild', 'description_field' => '', 'calendar' => ['enabled' => false]]];
+        $v = Jobs::fromEntry($fields, $t, ['id' => 1, 'titel' => 'Sommerfest im Garten', 'tag' => '2030-06-01', 'bild' => 7]);
+        self::t(($v['titel'] ?? '') === 'Sommerfest' && ($v['foto'] ?? 0) === 7 && str_contains((string) ($v['wann'] ?? ''), '2030') && !isset($v['farbe']), 'Werte aus einem Eintrag: Titel (gekürzt), Datum, Bild – Farbe bleibt');
+        $view = Jobs::view(['id' => 'abcdef123456', 'status' => 'waiting']);
+        self::t(str_contains($view['finish_url'], 'auftrag=abcdef123456') && Jobs::find('../x') === null, 'Auftrag: Link zum Fertigstellen, ungültige ID abgelehnt');
     }
 
     /** Bild speichern (Mediathek, Ersetzen hält die ID), Verwendungen der Quellfotos, Vorlagen ablegen und Rechte */

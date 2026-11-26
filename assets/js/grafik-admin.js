@@ -69,6 +69,26 @@ document.addEventListener('click', e => {
     .then(r => { if (r.saved && b.closest('.ge-store, .adm-head')) location.reload(); });
 });
 
+// Grafik-Auftrag (MCP, src/Jobs.php): /admin/grafik?auftrag={id} – Vorlage mit den Werten öffnen, Bilder automatisch erstellen,
+// danach erledigt melden (Medien-IDs für den Agenten)
+const job = new URLSearchParams(location.search).get('auftrag');
+if (job && /^[a-f0-9]{12}$/.test(job)) {
+  (async () => {
+    const base = (window.CMSAdmin?.extData?.('grafik')?.boot || '/admin/api/grafik/boot').replace(/\/boot$/, '');
+    const r = await fetch(base + '/job?id=' + job, { credentials: 'same-origin', headers: { Accept: 'application/json' } }).then(x => x.json()).catch(() => null);
+    const j = r?.job;
+    if (!j) { toast(r?.error || t('Auftrag nicht gefunden.'), 'error'); return; }
+    if (j.status === 'done') { toast(t('Dieser Auftrag ist schon erledigt – die Bilder liegen in der Mediathek.'), 'info'); return; }
+    const res = await fillGraphicTemplate({ template: j.template, id: j.graphic || undefined, values: j.values, formats: j.formats, name: j.name, alt: j.alt, auto: true });
+    if (!res.saved) return;
+    const csrf = document.getElementById('adm-csrf')?.value || document.querySelector('input[name=_csrf]')?.value || '';
+    await fetch(base + '/job/done', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-Token': csrf },
+      body: JSON.stringify({ id: job, graphic: res.saved.id, outputs: res.saved.outputs, _csrf: csrf }) }).catch(() => {});
+    history.replaceState(null, '', location.pathname);
+    location.reload();
+  })();
+}
+
 // Öffentliche Schnittstelle (vorher Teil des Cores): CMSAdmin.graphic.open({ format, mediaId, id, block, svg, target, onSave })
 if (window.CMSAdmin) window.CMSAdmin.graphic = { open: openGraphicEditor, fill: fillGraphicTemplate };
 

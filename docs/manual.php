@@ -219,7 +219,13 @@
   </ol>
   <p>Die fertigen Bilder stehen danach ausgewählt in der Mediathek. <b>Felder der Vorlage ändern …</b> (Rechtsklick auf das Bild) öffnet das Formular mit den
     bisherigen Werten wieder – Speichern ersetzt die Bilder, ihre Verwendungen bleiben.</p>
-  <h3 id="grafik-markierungen">Markierungen für ein interaktives Bild</h3>
+    <h3 id="grafik-agent">Bilder von einem KI-Agenten beauftragen</h3>
+  <p>Über MCP (siehe Handbuch &amp; Hilfe → <b>KI-Agenten (MCP)</b>) kann ein Agent Bilder aus Vorlagen beauftragen – etwa „Mach aus dem Termin
+    Sommerfest eine Instagram-Grafik und eine Story mit unserer Vorlage“. Er wählt Vorlage, Texte und Formate; Titel, Datum, Ort und Bild übernimmt er
+    auf Wunsch aus einem Eintrag. Die Bilder entstehen im Browser in derselben Qualität wie im Editor: Der Agent gibt Ihnen einen Link – öffnen Sie ihn
+    (angemeldet), sehen Sie die Vorschau, die Bilder werden automatisch erstellt und in der Mediathek gespeichert. Offene Aufträge stehen in der
+    <a href="<?= e(url('/admin/grafik')) ?>">Grafik-Ablage</a> unter <b>Aufträge eines KI-Agenten</b> („Fertigstellen“).</p>
+<h3 id="grafik-markierungen">Markierungen für ein interaktives Bild</h3>
   <p>Im Block <b>Interaktives Bild</b> (und in Datentabellen mit Markierungen) steht über den Markierungen der Knopf <b>Im Grafik-Editor öffnen</b>
     (Recht <b>Dateien hochladen und bearbeiten</b>). Er öffnet das gewählte Bild im Grafik-Editor – das Bild ist die feste Grundlage und lässt sich weder
     verschieben noch löschen. Ohne Bild erscheint der Hinweis, zuerst eines zu wählen.</p>

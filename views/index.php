@@ -18,6 +18,18 @@ $help = [
     <?php if (isset($groups['icon'])): ?><button type="button" class="adm-btn" data-ge-open data-format="icon"><?= icon('plus') ?> <?= e(__('Neues Symbol')) ?></button><?php endif; ?>
   </div>
 </header>
+<?php if (!empty($jobs)): /* Grafik-Aufträge (MCP, src/Jobs.php): Bilder entstehen beim Öffnen im Browser */ ?>
+<section class="adm-card ge-jobs" aria-labelledby="ge-jobs-h">
+  <h2 id="ge-jobs-h"><?= e(__('Aufträge eines KI-Agenten')) ?></h2>
+  <p class="adm-muted"><?= e(__('Ein Agent hat Bilder aus Vorlagen beauftragt. „Fertigstellen“ zeigt die Vorschau und legt die Bilder in der Mediathek ab.')) ?></p>
+  <ul class="ge-jobs__list" role="list">
+    <?php foreach ($jobs as $j): ?>
+    <li><b><?= e((string) $j['name']) ?></b> <span class="adm-muted"><?= e((string) $j['template_name']) ?> · <?= e(implode(', ', (array) $j['formats'])) ?> · <?= e(fmt()->datetime((string) $j['created'])) ?></span>
+      <a class="adm-btn adm-btn--small adm-btn--primary" href="<?= e(url('/admin/grafik') . '?auftrag=' . $j['id']) ?>"><?= e(__('Fertigstellen')) ?></a></li>
+    <?php endforeach; ?>
+  </ul>
+</section>
+<?php endif; ?>
 <?php if (isset($groups['preview'])): /* Blockvorschauen gelten für die ganze Website: Recht design.edit */ ?>
 <div class="adm-card ge-newpv">
   <label class="f"><span><?= e(__('Blockvorschau gestalten für')) ?></span>

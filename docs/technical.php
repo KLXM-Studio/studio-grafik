@@ -37,6 +37,14 @@
       <code>graphic_media</code>, <code>graphic_shared</code>; Einstellungen <code>block_previews</code>, <code>graphic_text_styles</code>;
       persönliche Einstellungen <code>ui_prefs.grafik</code>) – das Paket hat keine eigenen Tabellen und keine Migrationen.</li>
   </ul>
+  <h3 id="grafik-mcp">MCP: Bilder aus Vorlagen (<code>src/Jobs.php</code>)</h3>
+  <p>Mit Core-Andockstelle <code>Extension::mcpTool</code> (sonst ohne MCP): <code>list_graphic_templates</code>, <code>create_graphic</code> (Auftrag:
+    <code>template</code> bzw. <code>graphic</code>, <code>values</code>, <code>entry {table, id}</code> → <code>Jobs::fromEntry</code> ordnet Titel, Datum (Kalender bzw. erstes Datumsfeld),
+    Ort, Text und Bild den Feldern nach Schlüssel/Name zu; <code>formats</code> <code>main|og|sq|pt|st|hd</code>, <code>name</code>, <code>alt</code>), <code>get_graphic_job</code>,
+    <code>list_graphics</code>. Werte prüft <code>Templates::validate</code>. Ablage <code>storage/grafik-jobs/{website}-{id}.json</code> (30 Tage). Gerendert wird im Browser:
+    <code>/admin/grafik?auftrag={id}</code> → <code>grafik-admin.js</code> lädt <code>GET /admin/api/grafik/job</code>, ruft <code>fill({template, id, values, formats, name, alt, auto: true})</code>
+    (<code>fill.js</code>: Fotos laden, Formate vorwählen, Schriften abwarten, <code>create()</code>) und meldet <code>POST /admin/api/grafik/job/done</code> mit den Ausgaben.
+    Grund: Einpassen, Schriften und Foto-Korrekturen sind Browser-Code; ImageMagick ohne librsvg gäbe sie nicht gleich wieder.</p>
   <h3 id="grafik-markierungen-technik">Modus „Markierungen“ (<code>assets/js/grafik/hotspots.js</code>)</h3>
   <ul>
     <li><b>Modell:</b> jede Markierung ist eine gewöhnliche Form des Editors mit <code>data-hs-shape</code> (<code>point</code> = Kreis fester Größe,

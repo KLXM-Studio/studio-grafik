@@ -3,7 +3,8 @@
  * Formular links (Bild über den Medienwähler, Texte mit Höchstlänge, Design-Farben, Ein/Aus), Vorschau rechts je Format, Formate
  * wählen → fertige Pixelbilder in der Mediathek (Core\Graphics\Compose, mit Verweis auf Vorlage und Werte – „Felder ändern“ öffnet
  * das Formular wieder). Text passt sich an: Schrift schrumpft bis zur Mindestgröße, dann ein Hinweis am Feld.
- *   CMSGraphicEditor.fill({ id?: Bild (Komposition) zum Ändern, template?: 'site:1', returnFocus }) → Promise<{ saved: {outputs} | null }>
+ *   CMSGraphicEditor.fill({ id?: Bild (Komposition) zum Ändern, template?: 'site:1', returnFocus, values?, formats?, name?, alt?, auto? })
+ *     → Promise<{ saved: {outputs} | null }> – values/formats/name/alt/auto: Grafik-Auftrag (MCP, src/Jobs.php), auto erstellt gleich
  * Alle Aufrufe an das CMS über host.js. MIT
  */
 import { t } from 'klxm-studio/_i18n.js';
@@ -254,9 +255,37 @@ export async function fill(opts = {}) {
 
     dlg.showModal();
     const tref = opts.template || boot.doc?.tpl;
-    const preset = opts.id ? (boot.doc?.vals || {}) : null;
+    const preset = opts.values ? { ...(opts.id ? (boot.doc?.vals || {}) : {}), ...opts.values } : (opts.id ? (boot.doc?.vals || {}) : null);
     if (opts.id && boot.doc?.outputs) fmts = new Set(Object.keys(boot.doc.outputs).map(k => (k === 'main' ? 'main' : k)));
     const tp = tref && templates.find(x => x.ref === tref);
-    if (tp) start(tp, preset); else chooser();
+    if (!tp) { chooser(); return; }
+    // Grafik-Auftrag (MCP, Jobs.php): Bilder der Werte laden, Formate vorwählen, Name/Alt-Text setzen, auf Wunsch gleich erstellen
+    (async () => {
+      const ids = Object.values(preset || {}).filter(v => typeof v === 'number' && v > 0);
+      if (ids.length) await photos.need(ids).catch(() => {});
+      start(tp, preset);
+      if (opts.formats?.length) {
+        const want = new Set();
+        for (const f of opts.formats) {
+          const o = dlg.offer.find(z => z.id === f || z.id === 'f-' + f || (z.board && z.label === f)) || (f === 'main' ? { id: 'main' } : null);
+          if (o) want.add(o.id);
+        }
+        if (want.size) {
+          fmts = want;
+          dlg.querySelectorAll('[data-fmt]').forEach(c => { c.checked = fmts.has(c.dataset.fmt); });
+          rebuild();
+        }
+      }
+      const form = dlg.querySelector('.ge-fill__form');
+      if (opts.name && form) form.querySelector('[name=name]').value = opts.name;
+      if (opts.alt && form) { const a = form.querySelector('[name=alt]'); a.value = opts.alt; a.dataset.auto = '0'; }
+      if (opts.auto) {
+        try { await document.fonts.ready; } catch { /* egal */ }
+        await new Promise(r => setTimeout(r, 400));
+        rebuild();
+        await new Promise(r => setTimeout(r, 200));
+        create();
+      }
+    })();
   });
 }

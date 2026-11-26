@@ -31,14 +31,14 @@ use Klxm\Grafik\Templates;
 return [
     'name' => 'grafik',
     'label' => 'Grafik-Editor – Infografiken, Symbole, Bilder mit Foto und Text',
-    'version' => '1.3.0',
+    'version' => '1.4.0',
     'requires' => '>=1.0.0',
     'description' => 'Grafiken direkt in der Verwaltung zeichnen und bearbeiten: Infografiken mit Design-Farben, Bewegung und Daten, Symbole, Blockvorschauen, eigene Bausteine, Bilder mit Foto und Text, Formate für soziale Netzwerke und Vorlagen zum Ausfüllen.',
     'author' => 'KLXM Crossmedia GmbH and contributors',
     'license' => 'MIT',
     'homepage' => 'https://studio.klxm.de',
     'provides' => ['Mediathek: Menü „Neu“ (Infografik, Bild mit Foto und Text, Aus Vorlage, Symbol, Blockvorschau), „Im Grafik-Editor bearbeiten“, Link „Grafik-Ablage“',
-        'Seiten /admin/grafik (Grafik-Ablage) und /admin/grafik/editor', 'Blockauswahl: „Vorschau gestalten“', 'Interaktives Bild: „Im Grafik-Editor öffnen“ (Markierungen zeichnen)', 'Recht „Vorlagen für Bilder gestalten“', 'Befehl grafik:selftest'],
+        'Seiten /admin/grafik (Grafik-Ablage) und /admin/grafik/editor', 'Blockauswahl: „Vorschau gestalten“', 'Interaktives Bild: „Im Grafik-Editor öffnen“ (Markierungen zeichnen)', 'Recht „Vorlagen für Bilder gestalten“', 'MCP-Werkzeuge list_graphic_templates, create_graphic, get_graphic_job, list_graphics', 'Befehl grafik:selftest'],
     'commands' => ['grafik:selftest', 'grafik:beispiele'],
     'usage' => function (): ?string {
         try {
@@ -80,7 +80,40 @@ return [
             $r->post('/admin/api/grafik/template/delete', [$c, 'templateDelete'], $up);
             $r->post('/admin/api/grafik/assign', [$c, 'assign'], $up);
             $r->post('/admin/api/grafik/{id}/delete', [$c, 'delete'], 'media.delete');
+            // Grafik-Aufträge (MCP): Auftrag lesen, nach dem Erstellen im Browser erledigt melden
+            $r->get('/admin/api/grafik/job', [$c, 'job'], $up);
+            $r->post('/admin/api/grafik/job/done', [$c, 'jobDone'], $up);
         });
+
+        // MCP (Core ≥ Extension::mcpTool): Vorlagen lesen, Bild aus Vorlage beauftragen, Stand und letzte Bilder
+        if (method_exists($x, 'mcpTool')) {
+            $x->mcpTool(['name' => 'list_graphic_templates', 'title' => 'Grafik-Vorlagen', 'group' => 'media', 'perm' => 'media.upload',
+                'description' => 'Vorlagen für Bilder (Grafik-Editor) mit ihren Feldern (key, label, type text|image|color|toggle, max_chars) und Formaten (main = Format der Vorlage, og, sq, pt, st = Story, hd). Vor create_graphic nutzen.',
+                'examples' => ['Welche Grafik-Vorlagen gibt es für Social Media?'],
+                'run' => fn(array $a): array => ['templates' => Klxm\Grafik\Jobs::templates()]]);
+            $x->mcpTool(['name' => 'create_graphic', 'title' => 'Bild aus Vorlage beauftragen', 'group' => 'media', 'perm' => 'media.upload', 'write' => true,
+                'description' => 'Bild aus einer Grafik-Vorlage erstellen lassen: template (ref aus list_graphic_templates), values (key => Text bzw. Medien-ID), optional entry {table, id} – füllt Titel, Datum, Ort, Text und Bild aus dem Eintrag (z. B. Termin) –, formats (z. B. ["sq","st"]), name, alt (Bildbeschreibung). Bestehendes Bild ändern: graphic (ID) statt template. Die Pixelbilder entstehen im Browser in Editor-Qualität: Gib der Person den finish_url-Link; nach dem Öffnen liegen die Bilder in der Mediathek (get_graphic_job meldet Medien-ID und Adresse).',
+                'input' => ['template' => ['type' => 'string', 'description' => 'Vorlage, z. B. site:3'], 'values' => ['type' => 'object', 'description' => 'Feldwerte: key => Text bzw. Medien-ID (Bild)', 'additionalProperties' => true],
+                    'entry' => ['type' => 'object', 'description' => '{table, id}: Werte aus einem Eintrag übernehmen', 'additionalProperties' => true],
+                    'formats' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'main, og, sq, pt, st, hd'], 'name' => ['type' => 'string', 'description' => 'Dateiname'],
+                    'alt' => ['type' => 'string', 'description' => 'Bildbeschreibung (Alt-Text)'], 'graphic' => ['type' => 'integer', 'description' => 'Bestehendes Bild (Komposition) mit neuen Werten']],
+                'examples' => ['Mach aus dem Termin „Sommerfest“ eine Instagram-Grafik und eine Story mit unserer Vorlage.'],
+                'run' => function (array $a, Core\Api\CmsService $s): array {
+                    try { return Klxm\Grafik\Jobs::create($a, 'MCP'); } catch (\RuntimeException $e) { throw new Core\Api\ApiError(422, $e->getMessage()); }
+                }]);
+            $x->mcpTool(['name' => 'get_graphic_job', 'title' => 'Stand eines Grafik-Auftrags', 'group' => 'media', 'perm' => 'media.upload',
+                'description' => 'Stand eines Auftrags aus create_graphic (id): waiting oder done, bei done die Bilder (media_id, url je Format).',
+                'input' => ['id' => ['type' => 'string', 'description' => 'Auftrags-ID']], 'required' => ['id'],
+                'run' => function (array $a): array {
+                    $j = Klxm\Grafik\Jobs::find((string) ($a['id'] ?? '')) ?? throw new Core\Api\ApiError(404, 'Auftrag nicht gefunden.');
+                    return Klxm\Grafik\Jobs::view($j);
+                }]);
+            $x->mcpTool(['name' => 'list_graphics', 'title' => 'Bilder aus dem Grafik-Editor', 'group' => 'media', 'perm' => 'media.upload',
+                'description' => 'Letzte Bilder aus Vorlagen bzw. dem Grafik-Editor mit ihren Ausgaben je Format (media_id, url) und offene Aufträge.',
+                'input' => ['limit' => ['type' => 'integer', 'description' => 'höchstens (Standard 20)']],
+                'run' => fn(array $a): array => ['graphics' => Klxm\Grafik\Jobs::recent((int) ($a['limit'] ?? 20)),
+                    'waiting' => array_map([Klxm\Grafik\Jobs::class, 'view'], Klxm\Grafik\Jobs::all('waiting'))]]);
+        }
 
         // Verwaltung: kleines Skript auf jeder Seite (Mediathek-Einträge, Overlay, Knöpfe data-ge-open) – der Editor selbst
         // (grafik.js, grafik.css) lädt erst beim ersten Öffnen

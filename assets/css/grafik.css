@@ -810,3 +810,10 @@ html.adm-ui[data-theme=dark] .gx-label { fill: #7DDBA6 }
 .ge-ov__hs text { fill: #fff; font: 800 12px var(--adm-font, sans-serif); text-anchor: middle }
 .ge-ov__hs.is-on circle { fill: #C2410C }
 .ge-hs-error { display: grid; place-content: center; gap: 12px; min-height: 60vh; padding: 24px; text-align: center; font-size: 15px }
+
+/* Grafik-Aufträge (MCP) */
+.ge-jobs{margin-bottom:18px}
+.ge-jobs h2{margin:0 0 4px}
+.ge-jobs__list{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px}
+.ge-jobs__list li{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ge-jobs__list .adm-btn{margin-left:auto}

@@ -1,5 +1,14 @@
 # Changelog – Grafik-Editor (`klxm/studio-grafik`)
 
+## 1.4.0 (2026-11-26)
+
+- Neu: **Bilder aus Vorlagen per KI-Agent (MCP).** Werkzeuge `list_graphic_templates` (Vorlagen mit Feldern und Formaten),
+  `create_graphic` (Vorlage + Texte/Bild oder ein Eintrag – z. B. Termin → Titel, Datum, Ort, Bild – plus Formate wie quadratisch und Story),
+  `get_graphic_job` (Stand, Medien-IDs und Adressen) und `list_graphics`. Die Pixelbilder entstehen wie bei „Aus Vorlage erstellen“ im
+  Browser (Schriften, Einpassen, Fotos genau wie im Editor): Der Agent liefert einen Link; wer ihn öffnet, sieht die Vorschau, die Bilder
+  werden automatisch erstellt und liegen in der Mediathek. Offene Aufträge stehen in der Grafik-Ablage unter „Aufträge eines KI-Agenten“.
+  Ablage `storage/grafik-jobs/` (30 Tage), keine Datenbankänderung. Setzt Core mit `Extension::mcpTool` voraus (ältere Cores: ohne MCP).
+
 ## 1.3.1 (2026-11-26)
 
 - Behoben: Vorlagen zeigen in der Übersicht ein Vorschaubild statt nur eines Symbols.
