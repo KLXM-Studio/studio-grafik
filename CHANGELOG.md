@@ -1,5 +1,9 @@
 # Changelog – Grafik-Editor (`klxm/studio-grafik`)
 
+## 1.3.1 (2026-11-26)
+
+- Behoben: Vorlagen zeigen in der Übersicht ein Vorschaubild statt nur eines Symbols.
+
 ## 1.3.0 (2026-11-23)
 
 - Neu: **Beispiel-Vorlagen** „Veranstaltung ankündigen“ (1200 × 630, Foto, Akzentfarbe, Datum, Titel, Hinweis ein/aus) und „Zitat“

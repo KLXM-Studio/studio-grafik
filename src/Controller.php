@@ -34,7 +34,7 @@ final class Controller extends AdminController
             'css' => ['css/grafik.css'],
             'groups' => $groups,
             // Vorlagen zum Ausfüllen (Persona Bild) – nur mit „graphics.templates“
-            'templates' => Templates::can() ? Templates::all() : null,
+            'templates' => Templates::can() ? Templates::all(true) : null,   // mit SVG: Vorschau auf der Karte
             'blocks' => Graphics::canKind('preview') ? Graphics::blockTypes() : [],
         ]);
     }

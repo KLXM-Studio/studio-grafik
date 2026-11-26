@@ -71,7 +71,8 @@ $help = [
   <ul class="ge-store__grid">
     <?php foreach ($templates as $tp): ?>
     <li class="ge-store__item ge-store__item--template">
-      <span class="ge-store__pv" aria-hidden="true"><?= icon('image') ?></span>
+      <?php // Vorschau: das SVG der Vorlage als Bild (data:-Adresse – in <img> laufen keine Skripte, CSP der Verwaltung erlaubt data:) ?>
+      <span class="ge-store__pv" aria-hidden="true"><?php if (!empty($tp['svg'])): ?><img src="data:image/svg+xml;base64,<?= base64_encode((string) $tp['svg']) ?>" alt="" loading="lazy"><?php else: ?><?= icon('image') ?><?php endif; ?></span>
       <strong class="ge-store__name"><?= e($tp['name']) ?></strong>
       <small class="adm-muted"><?= e($tp['width'] . ' × ' . $tp['height']) ?> · <?= e($tp['scope'] === 'network' ? __('alle Websites') : __('diese Website')) ?> · <?= e(__('{n} Felder', ['n' => count($tp['fields'])])) ?></small>
       <span class="ge-store__acts">
